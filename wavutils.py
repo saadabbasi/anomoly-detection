@@ -17,6 +17,7 @@ from keras.layers import Input, Dense
 from skimage.transform import resize
 import keras
 
+
 # wav file Input
 def file_load(wav_name, mono=False):
     """
@@ -148,8 +149,6 @@ def list_to_vector_array(file_list,
 
         # dataset[idx, vector_array.shape[0] * idx: vector_array.shape[0] * (idx + 1), :] = vector_array
         dataset[idx, ] = vector_array
-    dataset  = dataset / np.max(dataset)
-    np.save("features/data.npy",dataset)
     return dataset
 
 def save_features(filepath, features):
