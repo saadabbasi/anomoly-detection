@@ -3,6 +3,7 @@ from keras.layers import Input, Reshape, Dense, Conv2D, MaxPooling2D, Flatten
 from keras.layers import UpSampling2D, BatchNormalization, Activation, Conv2DTranspose
 import keras.layers as layers
 from keras.backend import int_shape
+import keras
 
 def keras_model(inputDim):
     """
@@ -62,7 +63,8 @@ def get_autoencoder_model():
     decoded = Conv2DTranspose(1, (5, 5), strides = (1,2), padding='same')(x)
 
     autoencoder = Model(input_img, decoded)
-    autoencoder.compile(optimizer='adam', loss='mean_squared_error')
+    opt = keras.optimizers.Adam(lr = 0.01)
+    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
 def get_model(inputDim, latentDim):
