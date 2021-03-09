@@ -5,11 +5,16 @@ from pathlib import Path
 import wavutils
 import matplotlib.pyplot as plt
 import models
+import tf_models
+import tensorflow as tf
 from tqdm import tqdm
 from sklearn import metrics
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 
+
+tf.set_random_seed = 42
+np.random.seed(42)
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 epochs = 10
@@ -19,8 +24,8 @@ n_fft=1024
 hop_length=512
 power=1.0
 batch_size = 16
-step = 3
-scaling = False
+step = 32
+scaling = True
 base_directory = '/data/mimii_dataset'
 
 dirs = sorted(glob.glob(os.path.abspath(f"{base_directory}/*/*/*")))
@@ -47,29 +52,32 @@ for fpath in dirs:
         wavutils.save_features(test_features, X_test)
 
     if scaling:
-        X_train = X_train / X_train.max()
-        X_test = X_test / X_test.max()
-        # from sklearn.preprocessing import Normalizer
-        # norm = Normalizer()
-        # # sc = StandardScaler()
-        # nsamples, nx, ny = X_train.shape
-        # X_train_flat = X_train.reshape((nsamples,nx*ny))
-        # X_train_flat = norm.fit_transform(X_train_flat)
-        # X_train = X_train_flat.reshape((nsamples, nx, ny))
+        print("Scaling...")
+        from sklearn.preprocessing import StandardScaler
+        norm = StandardScaler()
+        nsamples, nx, ny = X_train.shape
+        X_train_flat = X_train.reshape((nsamples,nx*ny))
+        X_train_flat = norm.fit_transform(X_train_flat)
+        X_train = X_train_flat.reshape((nsamples, nx, ny))
 
-        # nsamples, nx, ny = X_test.shape
-        # X_test_flat = X_test.reshape((nsamples,nx*ny))
-        # X_test_flat = norm.transform(X_test_flat)
-        # X_test = X_test_flat.reshape((nsamples, nx, ny))
+        nsamples, nx, ny = X_test.shape
+        X_test_flat = X_test.reshape((nsamples,nx*ny))
+        X_test_flat = norm.transform(X_test_flat)
+        X_test = X_test_flat.reshape((nsamples, nx, ny))
 
-    train_gen = wavutils.DataGenerator(train_features, batch_size=batch_size, dim=(32,128), shuffle=True, step=step)
-    test_gen = wavutils.DataGenerator(test_features, batch_size=batch_size, dim=(32,128), shuffle=False, step=step)
-    model = models.get_autoencoder_model()
+    train_gen = tf_models.DataGenerator(X_train, batch_size=batch_size, dim=(32,128), shuffle=True, step=step)
+    test_gen = tf_models.DataGenerator(X_test, batch_size=batch_size, dim=(32,128), shuffle=False, step=step)
+    # model = tf_models.get_ds_autoencoder_model()
+    model = tf_models.get_autoencoder_model()
     model.summary()
-    history = model.fit_generator(train_gen,
-                        validation_data=test_gen,
+    # history = model.fit_generator(train_gen,
+    #                     validation_data=test_gen,
+    #                     epochs=epochs,
+    #                     verbose=1)
+
+    history = model.fit(train_gen,
                         epochs=epochs,
-                        verbose=1)
+                        verbose=2)
 
     y_pred = [0. for k in eval_labels]
     y_true = eval_labels
@@ -92,7 +100,9 @@ for fpath in dirs:
             else:
                 batch = np.concatenate((batch, vector))
 
-
+        # for ii in range(95):
+        #     plt.imshow(batch[ii])
+        #     plt.savefig(f"test{ii}.png")
         data = batch.reshape((batch.shape[0], batch.shape[1], batch.shape[2], 1))
 
         errors = np.mean(np.square(data - model.predict(data)), axis=-1)

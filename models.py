@@ -1,9 +1,14 @@
 from keras.models import Model
-from keras.layers import Input, Reshape, Dense, Conv2D, MaxPooling2D, Flatten
+from keras.layers import Input, Reshape, Dense, Conv2D, MaxPooling2D, Flatten, DepthwiseConv2D
 from keras.layers import UpSampling2D, BatchNormalization, Activation, Conv2DTranspose
-import keras.layers as layers
+import tensorflow as tf
+import tensorflow.keras.layers as layers
+# import keras.layers as layers
 from keras.backend import int_shape
 import keras
+
+
+
 
 def keras_model(inputDim):
     """
@@ -19,7 +24,6 @@ def keras_model(inputDim):
     h = Dense(inputDim, activation=None)(h)
 
     return Model(inputs=inputLayer, outputs=h)
-
 
 def get_autoencoder_model():
     input_img = Input(shape=(32, 128, 1))    # adapt this if using 'channels_first' image data format
@@ -119,3 +123,7 @@ def get_model(inputDim, latentDim):
     autoencoder.compile(optimizer='adam', loss='mean_squared_error')
 
     return autoencoder
+
+if __name__ == "__main__":
+    model = get_autoencoder_model()
+    model.summary()
