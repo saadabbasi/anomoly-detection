@@ -11,7 +11,7 @@ from tqdm import tqdm
 from sklearn import metrics
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-
+import mimii_dataset
 
 tf.set_random_seed = 42
 np.random.seed(42)
@@ -28,7 +28,7 @@ step = 32
 scaling = True
 base_directory = '/data/mimii_dataset'
 
-dirs = sorted(glob.glob(os.path.abspath(f"{base_directory}/*/*/*")))
+dirs = sorted(glob.glob(os.path.abspath(f"{base_directory}/*/*/*")))[11:12]
 fbaseline = open("baseline.txt","w")
 for fpath in dirs:
     dataset = Path(fpath)
@@ -39,43 +39,38 @@ for fpath in dirs:
     train_files, train_labels, eval_files, eval_labels = wavutils.dataset_generator(fpath)
     train_features = os.path.join("features",f"train_{sound_lvl}_{machine_typ}_{machine_id}.npy")
     test_features = os.path.join("features",f"test_{sound_lvl}_{machine_typ}_{machine_id}.npy")
+    # test_features = os.path.join("features","test_6dB_fan_id_00.npy")
     if os.path.exists(train_features):
-        X_train = wavutils.load_features(train_features)
+        # X_train = wavutils.load_features(train_features)
+        ds = mimii_dataset.MIMIIDataset()
+        X_trian = ds.get_train_dataset()
     else:
         X_train = wavutils.list_to_vector_array(train_files, n_mels=n_mels, frames=frames, n_fft=n_fft, hop_length=hop_length, power=power)
         wavutils.save_features(train_features, X_train)
 
     if os.path.exists(test_features):
         X_test = wavutils.load_features(test_features)
+        # ds = mimii_dataset.MIMIIDataset()
+        # X_test = ds.get_test_dataset()
     else:
         X_test = wavutils.list_to_vector_array(eval_files, n_mels=n_mels, frames=frames, n_fft=n_fft, hop_length=hop_length, power=power)
         wavutils.save_features(test_features, X_test)
 
     if scaling:
         print("Scaling...")
-        from sklearn.preprocessing import StandardScaler
-        norm = StandardScaler()
-        nsamples, nx, ny = X_train.shape
-        X_train_flat = X_train.reshape((nsamples,nx*ny))
-        X_train_flat = norm.fit_transform(X_train_flat)
-        X_train = X_train_flat.reshape((nsamples, nx, ny))
+        X_test = X_test / np.max(X_test)
 
-        nsamples, nx, ny = X_test.shape
-        X_test_flat = X_test.reshape((nsamples,nx*ny))
-        X_test_flat = norm.transform(X_test_flat)
-        X_test = X_test_flat.reshape((nsamples, nx, ny))
+    # train_gen = tf_models.DataGenerator(X_train, batch_size=batch_size, dim=(32,128), shuffle=True, step=step)
+    # test_gen = tf_models.DataGenerator(X_test, batch_size=batch_size, dim=(32,128), shuffle=False, step=step)
 
-    train_gen = tf_models.DataGenerator(X_train, batch_size=batch_size, dim=(32,128), shuffle=True, step=step)
-    test_gen = tf_models.DataGenerator(X_test, batch_size=batch_size, dim=(32,128), shuffle=False, step=step)
     # model = tf_models.get_ds_autoencoder_model()
     model = tf_models.get_autoencoder_model()
-    model.summary()
+    # model.summary()
     # history = model.fit_generator(train_gen,
-    #                     validation_data=test_gen,
     #                     epochs=epochs,
     #                     verbose=1)
 
-    history = model.fit(train_gen,
+    history = model.fit(x=X_trian,
                         epochs=epochs,
                         verbose=2)
 
