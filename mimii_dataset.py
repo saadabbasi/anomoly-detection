@@ -11,18 +11,28 @@ class MIMIIDataset:
     def __init__(self):
         self.normal_data_dir = _NORMAL_DATA_DIR
         self.abnormal_data_dir = _ABNORMAL_DATA_DIR
-        self.train_batch_size = 1
+        self.train_batch_size = 128
         self.test_batch_size = 512
         self.normalizer = sklearn.preprocessing.StandardScaler()
         self.dim = (32,128)
 
         self._read_dataset()
+        samples, nx, ny, _ = self.train_x.shape
+        train_x_flat = self.train_x.reshape((-1,nx*ny))
+        self.train_x = self.normalizer.fit_transform(train_x_flat).reshape((samples, nx, ny, 1))
+
+        samples, nx, ny, _ = self.test_x.shape
+        test_x_flat = self.test_x.reshape((-1,nx*ny))
+        self.test_x = self.normalizer.transform(test_x_flat).reshape((samples, nx, ny, 1))
 
     def get_train_dataset(self, num_shards=1, shard_index=0):
-        return self.train_x/self.train_x.max(), self.train_y
+        train_x = tf.data.Dataset.from_tensor_slices((self.train_x, self.train_x)).batch(self.train_batch_size)
+        train_x = train_x.shuffle(32)
+        return train_x, self.train_y
 
     def get_test_dataset(self, num_shards=1, shard_index=0):
-        return self.test_x/self.test_x.max(), self.test_y
+        test_x = tf.data.Dataset.from_tensor_slices((self.test_x, self.test_x)).batch(self.test_batch_size)
+        return test_x, self.test_y
 
     def _read_dataset(self):
         normal = np.load(os.path.join(self.normal_data_dir,"normal_6dB_fan_id_06.npy"))
