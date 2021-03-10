@@ -13,6 +13,9 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import mimii_dataset
 
+def as_numpy(t):
+    return t.numpy()
+
 tf.set_random_seed = 42
 np.random.seed(42)
 os.environ["CUDA_VISIBLE_DEVICES"] = "3"
@@ -43,67 +46,34 @@ for fpath in dirs:
     if os.path.exists(train_features):
         # X_train = wavutils.load_features(train_features)
         ds = mimii_dataset.MIMIIDataset()
-        X_trian = ds.get_train_dataset()
+        x_train, _ = ds.get_train_dataset()
     else:
-        X_train = wavutils.list_to_vector_array(train_files, n_mels=n_mels, frames=frames, n_fft=n_fft, hop_length=hop_length, power=power)
-        wavutils.save_features(train_features, X_train)
+        print("data not found")
 
     if os.path.exists(test_features):
         X_test = wavutils.load_features(test_features)
-        # ds = mimii_dataset.MIMIIDataset()
-        # X_test = ds.get_test_dataset()
+        x_test, eval_labels = ds.get_test_dataset()
     else:
-        X_test = wavutils.list_to_vector_array(eval_files, n_mels=n_mels, frames=frames, n_fft=n_fft, hop_length=hop_length, power=power)
-        wavutils.save_features(test_features, X_test)
-
-    if scaling:
-        print("Scaling...")
-        X_test = X_test / np.max(X_test)
-
-    # train_gen = tf_models.DataGenerator(X_train, batch_size=batch_size, dim=(32,128), shuffle=True, step=step)
-    # test_gen = tf_models.DataGenerator(X_test, batch_size=batch_size, dim=(32,128), shuffle=False, step=step)
+        print("data not found")
 
     # model = tf_models.get_ds_autoencoder_model()
     model = tf_models.get_autoencoder_model()
-    # model.summary()
-    # history = model.fit_generator(train_gen,
-    #                     epochs=epochs,
-    #                     verbose=1)
 
-    history = model.fit(x=X_trian,
+    history = model.fit(x=x_train,
+                        y=x_train,
                         epochs=epochs,
-                        verbose=2)
+                        verbose=1,
+                        batch_size=128)
 
     y_pred = [0. for k in eval_labels]
     y_true = eval_labels
+    recon = model.predict(x_test)
+    recon = np.squeeze(recon)
+    x_test = np.squeeze(x_test)
 
-
-    for file_idx, file_path in tqdm(enumerate(eval_files), total = len(eval_files)):
-        vector_array = X_test[file_idx]
-        length, _ = vector_array.shape
-
-        dim = 32
-        idex = np.arange(length - dim + step, step = step)
-
-        for idx in range(len(idex)):
-            start = min(idex[idx], length - dim)
-            vector = vector_array[start:start+dim,:]
-
-            vector = vector.reshape((1, vector.shape[0], vector.shape[1]))
-            if idx == 0:
-                batch = vector
-            else:
-                batch = np.concatenate((batch, vector))
-
-        # for ii in range(95):
-        #     plt.imshow(batch[ii])
-        #     plt.savefig(f"test{ii}.png")
-        data = batch.reshape((batch.shape[0], batch.shape[1], batch.shape[2], 1))
-
-        errors = np.mean(np.square(data - model.predict(data)), axis=-1)
-
-        y_pred[file_idx] = np.mean(errors)
-        
+    for n in range(len(x_test)):
+        yy = np.square(x_test[n] - recon[n]).mean(axis=1)
+        y_pred[n] = np.mean(yy)
 
     auc = metrics.roc_auc_score(y_true, y_pred)
     p_auc = metrics.roc_auc_score(y_true, y_pred, max_fpr=0.1)
@@ -113,19 +83,4 @@ for fpath in dirs:
     print(result_str)
 
 fbaseline.close()
-    # plt.plot(y_pred)
-    # plt.savefig("mse.png")
-# for num, file_name in tqdm(enumerate(eval_files), total=len(eval_files)):
-#     try:
-#         data = np.expand_dims(wavutils.file_to_vector_array(file_name),axis=-1)
-#         data = np.expand_dims(data,axis=0)
-#         pred = model.predict(data)
-#         error = np.mean(np.square(data - pred), axis=1)
-#         y_pred[num] = np.mean(error)
-#     except FileNotFoundError:
-#         print("File broken!!: {}".format(file_name))
-
-# score = metrics.roc_auc_score(y_true, y_pred)
-# print(f"AUC: {score}")
-
 
