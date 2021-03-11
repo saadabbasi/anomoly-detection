@@ -65,8 +65,8 @@ for fpath in dirs:
                         epochs=epochs,
                         verbose=1)
 
-    # os.makedirs("saved_models", exist_ok=True) 
-    tf.keras.models.save_model(model, "saved_models", save_format="h5")
+    os.makedirs("saved_models", exist_ok=True) 
+    tf.keras.models.save_model(model, "saved_models", save_format="tf")
 
     y_pred = [0. for k in eval_labels]
     y_true = eval_labels
