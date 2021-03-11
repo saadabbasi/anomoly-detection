@@ -1,5 +1,6 @@
 import os
 import glob
+import argparse
 
 import numpy as np
 from tqdm import tqdm
@@ -44,7 +45,7 @@ def generate_spectograms(target_dir,
     os.makedirs("spectograms/normal", exist_ok=True)
     os.makedirs("spectograms/abnormal", exist_ok=True)
     
-    dirs = sorted(glob.glob(os.path.abspath(f"{target_dir}/*/*/*")))[11:12]
+    dirs = sorted(glob.glob(os.path.abspath(f"{target_dir}/*/*/*")))
 
     for fpath in tqdm(dirs):
         files = sorted(glob.glob(os.path.abspath(f"{fpath}/{sound_type}/*.{ext}")))
@@ -66,5 +67,10 @@ def generate_spectograms(target_dir,
         npy_path = os.path.join("spectograms", f"{sound_type}", f"{sound_type}_{sound_lvl}_{machine_typ}_{machine_id}.npy")
         np.save(npy_path, cropped_spectograms)
 
-generate_spectograms('/data/mimii_dataset',sound_type="normal")
-generate_spectograms('/data/mimii_dataset',sound_type="abnormal")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("dataset_dir")
+    args = parser.parse_args()
+    generate_spectograms(args.dataset_dir,sound_type="normal")
+    generate_spectograms(args.dataset_dir,sound_type="abnormal")
