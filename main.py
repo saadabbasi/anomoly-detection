@@ -12,6 +12,7 @@ from sklearn import metrics
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import mimii_dataset
+from sklearn.metrics import roc_curve
 
 def as_numpy(t):
     return t.numpy()
@@ -31,7 +32,7 @@ step = 32
 scaling = True
 base_directory = '/data/mimii_dataset'
 
-dirs = sorted(glob.glob(os.path.abspath(f"{base_directory}/*/*/*")))[11:12]
+dirs = sorted(glob.glob(os.path.abspath(f"{base_directory}/*/*/*")))[8:9]
 fbaseline = open("baseline.txt","w")
 for fpath in dirs:
     dataset = Path(fpath)
@@ -44,7 +45,6 @@ for fpath in dirs:
     test_features = os.path.join("features",f"test_{sound_lvl}_{machine_typ}_{machine_id}.npy")
     # test_features = os.path.join("features","test_6dB_fan_id_00.npy")
     if os.path.exists(train_features):
-        # X_train = wavutils.load_features(train_features)
         ds = mimii_dataset.MIMIIDataset()
         x_train, _ = ds.get_train_dataset()
     else:
@@ -56,14 +56,17 @@ for fpath in dirs:
     else:
         print("data not found")
 
-    # model = tf_models.get_ds_autoencoder_model()
-    model = tf_models.get_autoencoder_model()
+    model = tf_models.get_ds_autoencoder_model()
+    model.summary()
+    # model = tf_models.get_autoencoder_model()
 
     history = model.fit(x=x_train,
                         y=x_train,
                         epochs=epochs,
-                        verbose=1,
-                        batch_size=128)
+                        verbose=1)
+
+    # os.makedirs("saved_models", exist_ok=True) 
+    tf.keras.models.save_model(model, "saved_models", save_format="h5")
 
     y_pred = [0. for k in eval_labels]
     y_true = eval_labels
@@ -71,9 +74,14 @@ for fpath in dirs:
     recon = np.squeeze(recon)
     x_test = np.squeeze(x_test)
 
-    for n in range(len(x_test)):
-        yy = np.square(x_test[n] - recon[n]).mean(axis=1)
-        y_pred[n] = np.mean(yy)
+    errors = np.square(x_test - recon).mean(axis=2)
+    y_pred = np.mean(errors,axis=1)
+
+    plt.hist(y_pred, bins='auto')
+
+    # fpr, tpr, thresholds = roc_curve(y_true, y_pred)
+    # plt.plot(fpr,tpr)
+    plt.savefig("mse_hist.png")
 
     auc = metrics.roc_auc_score(y_true, y_pred)
     p_auc = metrics.roc_auc_score(y_true, y_pred, max_fpr=0.1)

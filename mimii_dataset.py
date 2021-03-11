@@ -28,11 +28,11 @@ class MIMIIDataset:
     def get_train_dataset(self, num_shards=1, shard_index=0):
         train_x = tf.data.Dataset.from_tensor_slices((self.train_x, self.train_x)).batch(self.train_batch_size)
         train_x = train_x.shuffle(32)
-        return train_x, self.train_y
+        return self.train_x, self.train_y
 
     def get_test_dataset(self, num_shards=1, shard_index=0):
         test_x = tf.data.Dataset.from_tensor_slices((self.test_x, self.test_x)).batch(self.test_batch_size)
-        return test_x, self.test_y
+        return self.test_x, self.test_y
 
     def _read_dataset(self):
         normal = np.load(os.path.join(self.normal_data_dir,"normal_6dB_fan_id_06.npy"))
