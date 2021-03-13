@@ -4,16 +4,11 @@ import os
 import sklearn.preprocessing
 import sklearn.utils
 
-# _NORMAL_DATA_DIR = "/gensynth/workspace/datasets/mimii_spectograms/normal"
-# _ABNORMAL_DATA_DIR = "/gensynth/workspace/datasets/mimii_spectograms/abnormal"
-_NORMAL_DATA_DIR = "spectograms/normal"
-_ABNORMAL_DATA_DIR = "spectograms/abnormal"
-_TRAIN_BATCH_SIZE = 128
-_TEST_BATCH_SIZE = 512
+_SPECTOGRAM_DATA_DIR = "/gensynth/workspace/datasets/mimii_spectograms"
 
 def preprocess(input_img, target_img, y_true):
-    input_img = input_img / tf.reduce_max(input_img)
-    target_img = target_img / tf.reduce_max(target_img)
+    # input_img = input_img / tf.reduce_max(input_img)
+    # target_img = target_img / tf.reduce_max(target_img)
     return {'input_image': input_img, 'target_img': target_img, 'y_true': y_true}
 
 def split_array(arr):
@@ -23,42 +18,60 @@ def split_array(arr):
     return a,b
 
 class MIMIIDataset():
-    def __init__(self):
-        self.normal_data_dir = _NORMAL_DATA_DIR
-        self.abnormal_data_dir = _ABNORMAL_DATA_DIR
-        self.train_batch_size = _TRAIN_BATCH_SIZE
-        self.test_batch_size = _TEST_BATCH_SIZE
-        # self.normalizer = sklearn.preprocessing.StandardScaler()
-        self.dim = (32,128)
+    def __init__(self, machine_type_id = "6dB_fan_id_06", spectogram_dir = 'spectograms', train_batch_size = 128, test_batch_size = 512):
+        self.train_batch_size = train_batch_size
+        self.test_batch_size = test_batch_size
+        normal = np.load(os.path.join(spectogram_dir,"normal",f"normal_{machine_type_id}.npy")).astype(np.float32)
+        abnormal = np.load(os.path.join(spectogram_dir,"abnormal",f"abnormal_{machine_type_id}.npy")).astype(np.float32)
 
-        normal = np.load(os.path.join(self.normal_data_dir,"normal_6dB_fan_id_06.npy")).astype(np.float32)
-        abnormal = np.load(os.path.join(self.abnormal_data_dir,"abnormal_6dB_fan_id_06.npy")).astype(np.float32)
-
-        normal_labels = np.zeros((len(normal)))
-        abnormal_labels = np.ones((len(abnormal)))
-        train_x = normal[abnormal.shape[0]:]
-        train_y = normal_labels[abnormal.shape[0]:]
-        test_x = normal[:abnormal.shape[0]]
-        test_y = normal_labels[:abnormal.shape[0]]
-        test_x = np.concatenate((test_x, abnormal))
-        test_y = np.concatenate((test_y, abnormal_labels))
-        
-        self.train_x = np.expand_dims(train_x,axis=-1)
-        self.test_x = np.expand_dims(test_x,axis=-1)
-        self.train_y = train_y
-        self.test_y = test_y
-
-        # samples, nx, ny, _ = self.train_x.shape
-        # train_x_flat = self.train_x.reshape((-1,nx*ny))
-        # self.train_x = self.normalizer.fit_transform(train_x_flat).reshape((samples, nx, ny, 1))
-
-        # samples, nx, ny, _ = self.test_x.shape
-        # test_x_flat = self.test_x.reshape((-1,nx*ny))
-        # self.test_x = self.normalizer.transform(test_x_flat).reshape((samples, nx, ny, 1))
+        self.train_x, self.train_y, self.test_x, self.test_y = self._make_labels_and_combine(normal, abnormal)
+        self._scale_dataset()
 
         self.test_x, self.test_y = sklearn.utils.shuffle(self.test_x, self.test_y)
         self.test_x, self.val_x = split_array(self.test_x)
         self.test_y, self.val_y = split_array(self.test_y)
+
+    def train_dataset(self):
+        return self.train_x, self.train_y
+
+    def test_dataset(self):
+        return self.test_x, self.test_y
+
+    def val_dataset(self):
+        return self.val_x, self.val_y
+
+    def _scale_dataset(self):
+        norm = sklearn.preprocessing.MinMaxScaler()
+        samples, nx, ny, _ = self.train_x.shape
+        train_x_flat = self.train_x.reshape((-1,nx*ny))
+        self.train_x = norm.fit_transform(train_x_flat).reshape((samples, nx, ny, 1))
+
+        samples, nx, ny, _ = self.test_x.shape
+        test_x_flat = self.test_x.reshape((-1,nx*ny))
+        self.test_x = norm.transform(test_x_flat).reshape((samples, nx, ny, 1))
+
+    def _make_labels_and_combine(self, normal, abnormal):
+        normal_labels = np.zeros((len(normal)))
+        abnormal_labels = np.ones((len(abnormal)))
+        train_x = np.expand_dims(normal[abnormal.shape[0]:],axis=-1)
+        train_y = normal_labels[abnormal.shape[0]:]
+        test_x = normal[:abnormal.shape[0]]
+        test_y = normal_labels[:abnormal.shape[0]]
+        test_x = np.expand_dims(np.concatenate((test_x, abnormal)),axis=-1)
+        test_y = np.concatenate((test_y, abnormal_labels))
+
+        return train_x, train_y, test_x, test_y
+
+
+class MIMIIDatasetInterface():
+    def __init__(self):
+        self.ds = MIMIIDataset(spectogram_dir=_SPECTOGRAM_DATA_DIR)
+        self.train_x, self.train_y = self.ds.train_dataset()
+        self.test_x, self.test_y = self.ds.test_dataset()
+        self.val_x, self.val_y = self.ds.val_dataset()
+
+        self.train_batch_size = self.ds.train_batch_size
+        self.test_batch_size = self.ds.test_batch_size
 
     def get_train_dataset(self, num_shards=1, shard_index=0):
         train_x = tf.data.Dataset.from_tensor_slices((self.train_x, self.train_x, self.train_y)).batch(self.train_batch_size)
