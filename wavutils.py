@@ -2,6 +2,7 @@ import sys
 import os
 import glob
 
+import tensorflow as tf
 import numpy
 import numpy as np
 import librosa
@@ -12,10 +13,7 @@ import logging
 # from import
 from tqdm import tqdm
 from sklearn import metrics
-from keras.models import Model
-from keras.layers import Input, Dense
 from skimage.transform import resize
-import keras
 
 
 # wav file Input
@@ -244,7 +242,7 @@ def file_list_generator(target_dir,
     print("train_file num : {num}".format(num=len(files)))
     return files
 
-class DataGenerator(keras.utils.Sequence):
+class DataGenerator(tf.keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, list_IDs, batch_size=32, dim=(32,128), shuffle=True, step=8):
         'Initialization'
