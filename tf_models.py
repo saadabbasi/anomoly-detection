@@ -23,13 +23,13 @@ def get_autoencoder_model():
     x = layers.Activation('relu')(x)
 
     volume_size = keras.backend.int_shape(x)
-    x = layers.Conv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
-    encoded = layers.Flatten()(x)
+    encoded = layers.Conv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
+    # encoded = layers.Flatten()(x)
 
-    x = layers.Dense(volume_size[1] * volume_size[2] * volume_size[3])(encoded) 
-    x = layers.Reshape((volume_size[1], volume_size[2], 512))(x)     
+    # x = layers.Dense(volume_size[1] * volume_size[2] * volume_size[3])(encoded) 
+    # x = layers.Reshape((volume_size[1], volume_size[2], 512))(x)     
     # at this point the representation is (6, 6, 128), i.e. 128-dimensional
-
+    x = layers.UpSampling2D(size = (4,4))(encoded)
     x = layers.Conv2DTranspose(256, (3, 3), strides = (2,2), padding='same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
@@ -74,13 +74,14 @@ def get_ds_autoencoder_model():
     x = layers.Activation('relu')(x)
 
     volume_size = keras.backend.int_shape(x)
-    x = layers.SeparableConv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
-    encoded = layers.Flatten()(x)
+    encoded = layers.SeparableConv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
+    # encoded = layers.Flatten()(x)
 
-    x = layers.Dense(volume_size[1] * volume_size[2] * volume_size[3])(encoded) 
-    x = layers.Reshape((volume_size[1], volume_size[2], 512))(x)     
+    # x = layers.Dense(volume_size[1] * volume_size[2] * volume_size[3])(encoded) 
+    # x = layers.Reshape((volume_size[1], volume_size[2], 512))(x)     
     # at this point the representation is (6, 6, 128), i.e. 128-dimensional
 
+    x = layers.UpSampling2D(size = (4,4))(encoded)
     x = layers.SeparableConv2D(256, (3, 3), padding='same')(x)
     x = layers.UpSampling2D(size = (2,2))(x)
     x = layers.BatchNormalization()(x)
@@ -105,9 +106,9 @@ def get_ds_autoencoder_model():
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
-if __name__ == "__main__":
-    model = get_ds_autoencoder_model()
-    model.summary()
+# if __name__ == "__main__":
+#     model = get_ds_autoencoder_model()
+#     model.summary()
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
@@ -172,3 +173,8 @@ class DataGenerator(keras.utils.Sequence):
 
             X[i,] = crop
         return X
+
+
+
+# model = get_ds_autoencoder_model()
+# model.summary()
