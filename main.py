@@ -12,6 +12,30 @@ from sklearn.preprocessing import StandardScaler
 import mimii_dataset
 from sklearn.metrics import roc_curve
 
+def compute_probs(output_imgs, target_imgs):
+    # should I be calling these imgs?
+    recon = np.squeeze(output_imgs)
+    test_x = np.squeeze(target_imgs)
+    errors = np.square(test_x - recon).mean(axis=2)
+    y_pred = np.mean(errors,axis=1)
+    return y_pred
+
+def plot_distribution(fname, y_true, y_pred):
+    alpha = 0.75
+    fig, (ax1, ax2) = plt.subplots(ncols=2,nrows=1)
+    ax1.hist(y_pred[np.where(y_true==0)], label="Normal")
+    ax1.hist(y_pred[np.where(y_true==1)], label="Abnormal", alpha=alpha)
+    ax2.plot(y_pred[np.where(y_true==0)], label="Normal")
+    ax2.plot(y_pred[np.where(y_true==1)], label="Abnormal", alpha=alpha)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(fname)
+
+def compute_AUC(output_imgs, target_imgs, y_true, plot_hist=False):
+    y_pred = compute_probs(output_imgs, target_imgs)
+    auc = metrics.roc_auc_score(y_true, y_pred)
+    return auc
+
 import tf_models
 
 tf.set_random_seed = 42
@@ -31,61 +55,27 @@ base_directory = "/home/saad.abbasi/datasets/mimii"
 
 dirs = sorted(glob.glob(os.path.abspath(f"{base_directory}/*/*/*")))
 fbaseline = open("baseline.txt","w")
-for fpath in dirs:
-    dataset = Path(fpath)
-    dataset = dataset.parts
-    sound_lvl = dataset[-3]
-    machine_typ = dataset[-2]
-    machine_id = dataset[-1]
-    train_files, train_labels, eval_files, eval_labels = wavutils.dataset_generator(fpath)
-    train_features = os.path.join("/home/saad.abbasi/code/anomoly-detection/spectograms/normal",f"normal_{sound_lvl}_{machine_typ}_{machine_id}.npy")
-    test_features = os.path.join("/home/saad.abbasi/code/anomoly-detection/spectograms/abnormal",f"abnormal_{sound_lvl}_{machine_typ}_{machine_id}.npy")
-    # test_features = os.path.join("features","test_6dB_fan_id_00.npy")
-    if os.path.exists(train_features):
-        ds = mimii_dataset.MIMIIDataset()
-        x_train, _ = ds.get_train_dataset()
-    else:
-        print("data not found")
 
-    if os.path.exists(test_features):
-        X_test = wavutils.load_features(test_features)
-        x_test, eval_labels = ds.get_test_dataset()
-    else:
-        print("data not found")
+ds = mimii_dataset.MIMIIDataset(machine_type_id = "6dB_fan_id_06")
+train_x, _ = ds.train_dataset()
+test_x, eval_labels = ds.test_dataset()
 
-    model = tf_models.get_ds_autoencoder_model()
-    model.summary()
-    # model = tf_models.get_autoencoder_model()
+model = tf_models.get_ds_autoencoder_model(use_batchnorm=False, h_space_flat=False)
+# tf.keras.models.save_model(model, "tiny_anomoly_ds", save_format="h5")
+preds = model.predict(test_x)
+auc_prior = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
+y_pred = compute_probs(preds, test_x)
+plot_distribution("hist-prior.png", eval_labels, y_pred)
+model.summary()
 
-    # history = model.fit(x=x_train,
-    #                     y=x_train,
-    #                     epochs=epochs,
-    #                     verbose=1)
+history = model.fit(x=train_x, y=train_x, epochs=epochs,verbose=1)
 
-    os.makedirs("saved_models", exist_ok=True) 
-    tf.keras.models.save_model(model, "saved_models", save_format="tf")
+preds = model.predict(test_x)
+y_pred = compute_probs(preds, test_x)
+auc_after = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
 
-    y_pred = [0. for k in eval_labels]
-    y_true = eval_labels
-    recon = model.predict(x_test)
-    recon = np.squeeze(recon)
-    x_test = np.squeeze(x_test)
+plot_distribution("hist.png", eval_labels, y_pred)
 
-    errors = np.square(x_test - recon).mean(axis=2)
-    y_pred = np.mean(errors,axis=1)
-
-    plt.hist(y_pred, bins='auto')
-
-    # fpr, tpr, thresholds = roc_curve(y_true, y_pred)
-    # plt.plot(fpr,tpr)
-    plt.savefig("mse_hist.png")
-
-    auc = metrics.roc_auc_score(y_true, y_pred)
-    p_auc = metrics.roc_auc_score(y_true, y_pred, max_fpr=0.1)
-    result_str = f"{sound_lvl},{machine_typ},{machine_id},{auc},{p_auc}\n"
-    fbaseline.write(result_str)
-    fbaseline.flush()
-    print(result_str)
-
-fbaseline.close()
-
+print(f"AUC Before Training: {auc_prior:.3f} After: {auc_after:.3f}")
+os.makedirs("saved_models", exist_ok=True) 
+# print([n.name for n in tf.get_default_graph().as_graph_def().node])
