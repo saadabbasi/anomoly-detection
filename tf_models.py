@@ -49,53 +49,56 @@ def get_autoencoder_model(use_batchnorm = True):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
-def get_ds_autoencoder_model():
+def get_ds_autoencoder_model(use_batchnorm = True, h_space_flat = True):
     input_img = tf.keras.Input((32, 128, 1))    # adapt this if using 'channels_first' image data format
 
     x = layers.SeparableConv2D(32, (5, 5), padding='same')(input_img) # 32x128x1 -> 32x128x1
     x = layers.MaxPool2D(pool_size = (1,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(64, (5, 5),padding='same')(x) # 16x64x32 -> 16x64x32
     x = layers.MaxPool2D(pool_size = (1,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(128, (5, 5), padding='same')(x) # 8x32x32 -> 8x32x64
     x = layers.MaxPool2D(pool_size = (2,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(256, (3, 3), padding='same')(x) # 4x16x32 -> 4x16x128
     x = layers.MaxPool2D(pool_size = (2,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(512, (3, 3), padding='same')(x) # 4x16x32 -> 4x16x128
     x = layers.MaxPool2D(pool_size = (2,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    volume_size = keras.backend.int_shape(x)
-    x = layers.SeparableConv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
-    encoded = layers.Flatten()(x)
-
-    x = layers.Dense(volume_size[1] * volume_size[2] * volume_size[3])(encoded) 
-    x = layers.Reshape((volume_size[1], volume_size[2], 512))(x)     
+    if h_space_flat:
+        volume_size = keras.backend.int_shape(x)
+        x = layers.SeparableConv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
+        encoded = layers.Flatten()(x)
+        x = layers.Dense(volume_size[1] * volume_size[2] * volume_size[3])(encoded) 
+        x = layers.Reshape((volume_size[1], volume_size[2], 512))(x)     
+    else:
+        x = layers.SeparableConv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
+        x = layers.UpSampling2D(size = (4,4))(x)
     # at this point the representation is (6, 6, 128), i.e. 128-dimensional
 
     x = layers.SeparableConv2D(256, (3, 3), padding='same')(x)
     x = layers.UpSampling2D(size = (2,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(128, (3, 3), padding='same')(x)
     x = layers.UpSampling2D(size = (2,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(64, (5, 5), padding='same')(x)
     x = layers.UpSampling2D(size = (2,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(32, (5, 5), padding='same')(x)
     x = layers.UpSampling2D(size = (1,2))(x)
-    x = layers.BatchNormalization()(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.SeparableConv2D(1, (5, 5), padding='same')(x)
     decoded = layers.UpSampling2D(size = (1,2))(x)
@@ -104,6 +107,66 @@ def get_ds_autoencoder_model():
     opt = keras.optimizers.Adam(lr = 0.01)
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
+
+def get_ds_autoencoder_model2(use_batchnorm = True, h_space_flat = True):
+    input_img = tf.keras.Input((32, 128, 1))    # adapt this if using 'channels_first' image data format
+
+    x = layers.SeparableConv2D(32, (5, 5), padding='same')(input_img) # 32x128x1 -> 32x128x1
+    x = layers.MaxPool2D(pool_size = (1,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(32, (5, 5),padding='same')(x) # 16x64x32 -> 16x64x32
+    x = layers.MaxPool2D(pool_size = (1,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(32, (5, 5), padding='same')(x) # 8x32x32 -> 8x32x64
+    x = layers.MaxPool2D(pool_size = (2,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(32, (3, 3), padding='same')(x) # 4x16x32 -> 4x16x128
+    x = layers.MaxPool2D(pool_size = (2,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(32, (3, 3), padding='same')(x) # 4x16x32 -> 4x16x128
+    x = layers.MaxPool2D(pool_size = (2,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    if h_space_flat:
+        volume_size = keras.backend.int_shape(x)
+        x = layers.SeparableConv2D(40, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
+        encoded = layers.Flatten()(x)
+        x = layers.Dense(volume_size[1] * volume_size[2] * volume_size[3])(encoded) 
+        x = layers.Reshape((volume_size[1], volume_size[2], 512))(x)     
+    else:
+        x = layers.SeparableConv2D(20, (4,4), strides=(1,1), padding = 'valid')(x)  # 4x16x128 -> 4x16x40
+        x = layers.UpSampling2D(size = (4,4))(x)
+    # at this point the representation is (6, 6, 128), i.e. 128-dimensional
+
+    x = layers.SeparableConv2D(32, (3, 3), padding='same')(x)
+    x = layers.UpSampling2D(size = (2,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(32, (3, 3), padding='same')(x)
+    x = layers.UpSampling2D(size = (2,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(32, (5, 5), padding='same')(x)
+    x = layers.UpSampling2D(size = (2,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(32, (5, 5), padding='same')(x)
+    x = layers.UpSampling2D(size = (1,2))(x)
+    if use_batchnorm: x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(1, (5, 5), padding='same')(x)
+    decoded = layers.UpSampling2D(size = (1,2))(x)
+
+    autoencoder = keras.Model(input_img, decoded)
+    opt = keras.optimizers.Adam(lr = 0.01)
+    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
+    return autoencoder
+
 
 if __name__ == "__main__":
     model = get_ds_autoencoder_model()
