@@ -3,7 +3,6 @@
 *.gz
 test_bed.py
 *.png
-baseline.txt
-baseline-ds.txt
+baseline*
 settings.json
 saved_models
