@@ -280,6 +280,7 @@ def get_ds_autoencoder_model2(use_batchnorm = True, h_space_flat = True):
 if __name__ == "__main__":
     model = get_autoencoder_model_s(depthwise_conv())
     model.summary()
+    keras.models.save_model(model, "tinyanomaly_dw_s.h5", save_format='h5')
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
