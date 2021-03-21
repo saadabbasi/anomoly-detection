@@ -3,6 +3,7 @@ import numpy as np
 import os
 import mimii_dataset
 from sklearn import metrics
+import matplotlib.pyplot as plt
 
 IMAGE_INPUT_TENSOR = "input_1:0"
 TARGET_INPUT_TENSOR = "separable_conv2d_6_target:0"
@@ -20,8 +21,8 @@ def compute_probs(output_imgs, target_imgs):
 def plot_distribution(fname, y_true, y_pred):
     alpha = 0.75
     fig, (ax1, ax2) = plt.subplots(ncols=2,nrows=1)
-    ax1.hist(y_pred[np.where(y_true==0)], label="Normal")
-    ax1.hist(y_pred[np.where(y_true==1)], label="Abnormal", alpha=alpha)
+    ax1.hist(y_pred[np.where(y_true==0)], label="Normal", bins=100)
+    ax1.hist(y_pred[np.where(y_true==1)], label="Abnormal", alpha=alpha, bins=100)
     ax1.set_title("MSE Histrogram")
     ax2.plot(y_pred[np.where(y_true==0)], label="Normal")
     ax2.plot(y_pred[np.where(y_true==1)], label="Abnormal", alpha=alpha)
@@ -65,4 +66,6 @@ with graph.as_default():
     out = sess.run([OUTPUT_TENSOR], feed_dict = feed_dict)
 
 auc = compute_AUC(out, test_x, test_y)
-print(auc)
+y_pred = compute_probs(out, test_x)
+print(f"auc {auc:.3f}")
+plot_distribution("GS_hist.png",test_y,y_pred)
