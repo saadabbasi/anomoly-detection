@@ -100,7 +100,10 @@ def conv_baseline(inputDim=(32,128), latentDim=40):
     
     decoded = layers.Conv2DTranspose(1, (5, 5),strides=(1,2), padding='same')(x) 
 
-    return keras.Model(inputs=input_img, outputs=decoded)
+    autoencoder = keras.Model(inputs=input_img, outputs=decoded)
+    opt = keras.optimizers.Adam(lr = 0.001)
+    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
+    return autoencoder
 #########################################################################
 
 def get_autoencoder_model(use_batchnorm = True):
