@@ -50,55 +50,57 @@ def get_autoencoder_model_s(conv, use_batchnorm = False):
 def conv_baseline(inputDim, latentDim):
     """
     This is the convolutional autoencoder as described in https://arxiv.org/abs/2006.10417
-    The implementation is a verbatim copy from: https://github.com/APILASTRI/DCASE_Task2_UMINHO
+    The implementation is from: https://github.com/APILASTRI/DCASE_Task2_UMINHO
+
+    We move the keras implementation to tf.keras.
 
     We use this as a baseline for comparision 
     """
-    input_img = Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
+    input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
 
     # encoder
-    x = Conv2D(32, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(64, (5, 5),strides=(1,2), padding='same')(x)           #32x32
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(128, (5, 5),strides=(2,2), padding='same')(x)          #16x16
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(256, (3, 3),strides=(2,2), padding='same')(x)          #8x8
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(512, (3, 3),strides=(2,2), padding='same')(x)          #4x4
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = layers.Conv2D(32, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2D(64, (5, 5),strides=(1,2), padding='same')(x)           #32x32
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2D(128, (5, 5),strides=(2,2), padding='same')(x)          #16x16
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2D(256, (3, 3),strides=(2,2), padding='same')(x)          #8x8
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2D(512, (3, 3),strides=(2,2), padding='same')(x)          #4x4
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
 
-    volumeSize = int_shape(x)
+    volumeSize = keras.backend.int_shape(x)
     # at this point the representation size is latentDim i.e. latentDim-dimensional
-    x = Conv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
-    encoded = Flatten()(x)
+    x = layers.Conv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
+    encoded = layers.Flatten()(x)
     
     
     # decoder
-    x = Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = Reshape((volumeSize[1], volumeSize[2], 512))(x)                #4x4
+    x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
+    x = layers.Reshape((volumeSize[1], volumeSize[2], 512))(x)                #4x4
 
-    x = Conv2DTranspose(256, (3, 3),strides=(2,2), padding='same')(x)  #8x8
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2DTranspose(128, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2DTranspose(64, (5, 5),strides=(2,2), padding='same')(x)   #32x32
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2DTranspose(32, (5, 5),strides=(1,2), padding='same')(x)   #32x64
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
+    x = layers.Conv2DTranspose(256, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2DTranspose(128, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2DTranspose(64, (5, 5),strides=(2,2), padding='same')(x)   #32x32
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.Conv2DTranspose(32, (5, 5),strides=(1,2), padding='same')(x)   #32x64
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
     
-    decoded = Conv2DTranspose(1, (5, 5),strides=(1,2), padding='same')(x) 
+    decoded = layers.Conv2DTranspose(1, (5, 5),strides=(1,2), padding='same')(x) 
 
-    return Model(inputs=input_img, outputs=decoded)
+    return keras.Model(inputs=input_img, outputs=decoded)
 #########################################################################
 
 def get_autoencoder_model(use_batchnorm = True):
