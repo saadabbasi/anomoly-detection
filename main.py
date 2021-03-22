@@ -10,22 +10,11 @@ import numpy as np
 import mimii_dataset
 import tf_models
 
-# tf.set_random_seed(42)
-# np.random.seed(42)
-
 def compute_probs(output_imgs, target_imgs):
     # should I be calling these imgs?
     recon = np.squeeze(output_imgs)
     test_x = np.squeeze(target_imgs)
     errors = np.square(test_x - recon).mean(axis=2)
-    y_pred = np.mean(errors,axis=1)
-    return y_pred
-
-def compute_probs2(output_imgs, target_imgs):
-    # should I be calling these imgs?
-    recon = np.squeeze(output_imgs)
-    test_x = np.squeeze(target_imgs)
-    errors = np.square(test_x - recon).mean(axis=2).mean(axis=2)
     y_pred = np.mean(errors,axis=1)
     return y_pred
 
@@ -47,11 +36,6 @@ def compute_AUC(output_imgs, target_imgs, y_true, plot_hist=False):
     auc = metrics.roc_auc_score(y_true, y_pred)
     return auc
 
-def compute_AUC2(output_imgs, target_imgs, y_true, plot_hist=False):
-    y_pred = compute_probs2(output_imgs, target_imgs)
-    auc = metrics.roc_auc_score(y_true, y_pred)
-    return auc
-
 
 tf.set_random_seed = 42
 np.random.seed(42)
@@ -66,7 +50,6 @@ power=1.0
 batch_size = 16
 step = 3
 scaling = False
-format = '3D'
 
 spectrograms_fnames = ['0dB_fan_id_00','0dB_fan_id_02','0dB_fan_id_04','0dB_fan_id_06',
                         'min6dB_fan_id_00', 'min6dB_fan_id_02', 'min6dB_fan_id_04', 'min6dB_fan_id_06',
@@ -76,6 +59,7 @@ spectrograms_fnames = ['0dB_fan_id_00','0dB_fan_id_02','0dB_fan_id_04','0dB_fan_
                         '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
 
 fbaseline = open("baseline.txt","w")
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 for machine in spectrograms_fnames:
     ds = mimii_dataset.MIMIIDataset(machine_type_id = machine, format = format)
@@ -85,7 +69,8 @@ for machine in spectrograms_fnames:
 
     plot_distribution("hist-raw.png", eval_labels, raw)
 
-    model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True)
+    # model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True)
+    model = tf_models.conv_baseline()
 
     preds = model.predict(test_x)
     auc_prior = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
