@@ -6,3 +6,6 @@ test_bed.py
 baseline*
 settings.json
 saved_models
+model_archives
+gs_models
+graph.pb
