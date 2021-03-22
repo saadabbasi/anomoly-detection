@@ -43,41 +43,6 @@ def get_autoencoder_model_s(conv, use_batchnorm = False):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
-
-def get_ds_autoencoder_model_s(use_batchnorm = False):
-    input_img = keras.Input(shape=(32,128,1))
-
-    x = layers.SeparableConv2D(4*2, (3,3), padding = 'same')(input_img)
-    x = layers.MaxPool2D(pool_size = (1,2))(x)
-    x = layers.Activation('relu')(x)
-    if use_batchnorm: x = layers.BatchNormalization()(x)
-    x = layers.SeparableConv2D(8*2, (3,3), padding = 'same')(x)
-    x = layers.MaxPool2D(pool_size = (1,2))(x)
-    x = layers.Activation('relu')(x)
-    if use_batchnorm: x = layers.BatchNormalization()(x)
-    x = layers.SeparableConv2D(16*2, (3,3), padding = 'same')(x)
-    encoded = layers.MaxPool2D(pool_size = (4,4))(x)
-
-    x = layers.UpSampling2D(size = (4,4))(encoded)
-    x = layers.SeparableConv2D(16*2, (3,3), padding = 'same')(x)
-    x = layers.Activation('relu')(x)
-    if use_batchnorm: x = layers.BatchNormalization()(x)
-    x = layers.UpSampling2D(size = (1,2))(x)
-    x = layers.SeparableConv2D(8*2, (3,3), padding = 'same')(x)
-    x = layers.Activation('relu')(x)
-    if use_batchnorm: x = layers.BatchNormalization()(x)
-    x = layers.UpSampling2D(size = (1,2))(x)
-    x = layers.SeparableConv2D(4*2, (3,3), padding = 'same')(x)
-    x = layers.Activation('relu')(x)
-    if use_batchnorm: x = layers.BatchNormalization()(x)
-    decoded = layers.SeparableConv2D(1, (3,3), padding = 'same')(x)
-    # y = layers.Conv2D(16, (3,30))
-
-    autoencoder = keras.Model(input_img, decoded)
-    opt = keras.optimizers.Adam(lr = 0.001)
-    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
-    return autoencoder
-
 def get_ds_autoencoder_model_xs(use_batchnorm = False):
     input_img = keras.Input(shape=(32,128,1))
 
