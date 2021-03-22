@@ -41,7 +41,7 @@ tf.set_random_seed = 42
 np.random.seed(42)
 os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
-epochs = 20
+epochs = 100
 n_mels=128
 frames=5
 n_fft=1024
@@ -62,7 +62,7 @@ fbaseline = open("baseline.txt","w")
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 for machine in spectrograms_fnames:
-    ds = mimii_dataset.MIMIIDataset(machine_type_id = machine, format = format)
+    ds = mimii_dataset.MIMIIDataset(machine_type_id = machine)
     train_x, _ = ds.train_dataset()
     test_x, eval_labels = ds.test_dataset()
     raw = np.mean(test_x,axis=-1).mean(axis=-1).mean(axis=-1)
