@@ -81,15 +81,9 @@ for machine in spectrograms_fnames:
     ds = mimii_dataset.MIMIIDataset(machine_type_id = machine, format = format)
     train_x, _ = ds.train_dataset()
     test_x, eval_labels = ds.test_dataset()
-    if format == '4D':
-        raw = test_x.squeeze().mean(axis=-1).mean(axis=-1).mean(axis=-1) # np.mean(test_x,axis=1)
-    else:
-        raw = np.mean(test_x,axis=-1).mean(axis=-1).mean(axis=-1)
+    raw = np.mean(test_x,axis=-1).mean(axis=-1).mean(axis=-1)
 
-    if format == '4D':
-        plot_distribution("hist-raw-4D.png", eval_labels, raw)
-    else:
-        plot_distribution("hist-raw.png", eval_labels, raw)
+    plot_distribution("hist-raw.png", eval_labels, raw)
 
     model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True)
     # model = tf_models.get_ds_autoencoder_model(use_batchnorm=True)
