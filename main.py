@@ -86,41 +86,18 @@ for machine in spectrograms_fnames:
     plot_distribution("hist-raw.png", eval_labels, raw)
 
     model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True)
-    # model = tf_models.get_ds_autoencoder_model(use_batchnorm=True)
+
+    preds = model.predict(test_x)
+    auc_prior = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
+    y_pred = compute_probs(preds, test_x)
+    plot_distribution("hist-prior.png", eval_labels, y_pred)
 
 
-# tf.keras.models.save_model(model, "tiny_anomoly_ds", save_format="h5")
-    if format == '4D':
-        test_x_3d = test_x.reshape(len(test_x)*test_x.shape[1],test_x.shape[2],test_x.shape[3],1)
-        preds = model.predict(test_x_3d)
-        preds = preds.reshape(test_x.shape)
-        auc_prior = compute_AUC2(preds, test_x, eval_labels, plot_hist=True)
-        y_pred = compute_probs2(preds, test_x)
-        plot_distribution("hist-prior-4D.png", eval_labels, y_pred)
-    else:
-        preds = model.predict(test_x)
-        auc_prior = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
-        y_pred = compute_probs(preds, test_x)
-        plot_distribution("hist-prior.png", eval_labels, y_pred)
-
-    # model.summary()
-
-    if format == '4D':
-        history = model.fit(x=train_x.reshape(len(train_x)*train_x.shape[1],32,128,1), y=train_x.reshape(len(train_x)*train_x.shape[1],32,128,1), epochs=epochs,verbose=1)
-        preds = model.predict(test_x.reshape(len(test_x)*test_x.shape[1],test_x.shape[2],test_x.shape[3],1))
-        preds = preds.reshape(test_x.shape)
-        auc_after = compute_AUC2(preds, test_x, eval_labels, plot_hist=True)
-        y_pred = compute_probs2(preds, test_x)
-        plot_distribution(f"{machine}_hist-4d.png", eval_labels, y_pred)
-        # print(f"4D: AUC Before Training: {auc_prior:.3f} After: {auc_after:.3f}")
-    else:
-        history = model.fit(x=train_x,y=train_x, epochs=epochs,verbose=1)
-        preds = model.predict(test_x)
-        y_pred = compute_probs(preds, test_x)
-        auc_after = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
-        plot_distribution(f"{machine}_hist.png", eval_labels, y_pred)
-
-        # print(f"3D: AUC Before Training: {auc_prior:.3f} After: {auc_after:.3f}")
+    history = model.fit(x=train_x,y=train_x, epochs=epochs,verbose=1)
+    preds = model.predict(test_x)
+    y_pred = compute_probs(preds, test_x)
+    auc_after = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
+    plot_distribution(f"{machine}_hist.png", eval_labels, y_pred)
 
     sound_lvl, machine_typ, _, machine_id = machine.split('_')
     result_str = f"{sound_lvl},{machine_typ},{machine_id},{auc_after},{auc_prior}\n"
