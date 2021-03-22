@@ -47,7 +47,7 @@ def get_autoencoder_model_s(conv, use_batchnorm = False):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
-def conv_baseline(inputDim, latentDim):
+def conv_baseline(inputDim=(32,128), latentDim=40):
     """
     This is the convolutional autoencoder as described in https://arxiv.org/abs/2006.10417
     The implementation is from: https://github.com/APILASTRI/DCASE_Task2_UMINHO
