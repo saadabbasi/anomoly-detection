@@ -1,3 +1,5 @@
+import os
+os.system("source /opt/intel/openvino_2021/bin/setupvars.sh")
 import tensorflow as tf
 import numpy as np
 import os
@@ -5,7 +7,14 @@ import mimii_dataset
 from time import perf_counter_ns
 import openvino
 from openvino.inference_engine import IENetwork, IECore
-import os
+import argparse
+
+def convert_model_to_IR(frozen_model_path, output_name):
+    frozen_model_path = frozen_model_path.replace(" ","\ ")
+    output_dir = os.path.dirname(frozen_model_path)
+    cmd_string = f"python /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo_tf.py --input_model {frozen_model_path} --input \"input_1[1 32 128 1]\" -n {output_name} -o {output_dir}"
+    os.system(cmd_string)
+    # python /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo_tf.py --input_model frozen.pb --input "input_1[1 32 128 1]"
 
 def benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = 100):
     time_t = np.zeros((N,))
@@ -65,40 +74,63 @@ def get_flops(sess, run_meta):
 
     print("{:,} --- {:,}".format(flops.total_float_ops, params.total_parameters))
 
-# IMAGE_INPUT_TENSOR = "input_1:0"
-# TARGET_INPUT_TENSOR = "separable_conv2d_6_target:0"
-# OUTPUT_TENSOR = "separable_conv2d_6/BiasAdd:0"
-# LOSS_TENSOR = "loss/mul:0"
+def decode_model_path(model_dir):
+    gensynth_trial_id = os.path.split(model_dir)[1].split("-")[0]
+    return gensynth_trial_id
 
-IMAGE_INPUT_TENSOR = "input_1:0"
-TARGET_INPUT_TENSOR = "conv2d_6_target:0"
-OUTPUT_TENSOR = "conv2d_6/BiasAdd:0"
-LOSS_TENSOR = "loss/mul:0"
+def measure_latency_ns(model_dir):
+    gensynth_trial_id = decode_model_path(model_dir)
+    macro_arch = gensynth_trial_id.split("_")[1]
 
-model_dir = "/home/saad.abbasi/code/anomoly-detection/model_archives/TA_SC_6dB_fan_id_00-1670_4-2021-03-21_22 30 37/"
-model_dir = "/home/saad.abbasi/code/anomoly-detection/model_archives/TA_SC_6dB_fan_id_02-1673_10-2021-03-21_22 51 59/"
-model_dir = "/home/saad.abbasi/code/anomoly-detection/model_archives/TA_SC_6dB_fan_id_00-1556_4-2021-03-21_00 11 37"
-meta_path = os.path.join(model_dir, "model.meta")
-ckpt_path = model_dir
-device_to_run = ""
-os.environ["CUDA_VISIBLE_DEVICES"] = device_to_run
+    if macro_arch == 'SC':
+        IMAGE_INPUT_TENSOR = "input_1:0"
+        TARGET_INPUT_TENSOR = "conv2d_6_target:0"
+        OUTPUT_TENSOR = "conv2d_6/BiasAdd:0"
+        LOSS_TENSOR = "loss/mul:0"
+    elif macro_arch == 'DW':
+        IMAGE_INPUT_TENSOR = "input_1:0"
+        TARGET_INPUT_TENSOR = "separable_conv2d_6_target:0"
+        OUTPUT_TENSOR = "separable_conv2d_6/BiasAdd:0"
+        LOSS_TENSOR = "loss/mul:0"
+    else:
+        raise ValueError(f"{macro_arch} not recognized. Is your directory structure and name OK?")
 
-xml_path = os.path.join(model_dir, "frozen.xml")
-model = load_openvino_model(xml_path)
-openvino_min = benchmark_openvino_model_ns(model, (1,1,32,128)) / 1e6
-print(f"openvino: {openvino_min/1e6}")
+    
+    meta_path = os.path.join(model_dir, "model.meta")
+    ckpt_path = model_dir
+    frozen_path = os.path.join(model_dir, "frozen.pb")
+    openvino_output_name = "vino"
+    openvino_path = os.path.join(model_dir, f"{openvino_output_name}.xml")
 
-ds = mimii_dataset.MIMIIDataset('min6dB_slider_id_00', format = '3D', train_batch_size=1, test_batch_size=1)
+    convert_model_to_IR(frozen_path,openvino_output_name)
+    model = load_openvino_model(openvino_path)
+    openvino_min = benchmark_openvino_model_ns(model, (1,1,32,128))
 
-test_x, test_y = ds.test_dataset()
+    feed_dict = {IMAGE_INPUT_TENSOR: np.random.rand(1,32,128,1)}
+    N = 100
+    run_meta = tf.RunMetadata()
+    graph,sess,saver = load_graph(meta_path)
 
-# feed_dict = {IMAGE_INPUT_TENSOR: test_x}
-feed_dict = {IMAGE_INPUT_TENSOR: np.random.rand(1,32,128,1)}
-N = 100
-run_meta = tf.RunMetadata()
-graph,sess,saver = load_graph(meta_path)
+    with sess.as_default():
+        load_ckpt(sess, saver, ckpt_path)
+        tf_min = benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = 10)
 
-with sess.as_default():
-    load_ckpt(sess, saver, ckpt_path)
-    tf_min = benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = 10) / 1e6
-    print(f"OpenvinO: {openvino_min:.3f} µs, Tensorflow: {tf_min:.3f} µs")
+    return {'openvino':openvino_min, 'tensorflow':tf_min}
+
+
+if __name__ == "__main__":
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('model_dir')
+    args = parser.parse_args()
+    
+    model_dir = args.model_dir
+
+    models = [os.path.join(model_dir,name) for name in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir,name))]
+    with open("results.txt","w") as f:
+        for dir in models:
+            latency = measure_latency_ns(dir)
+            gensynth_trial_id = decode_model_path(dir)
+            f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
+                
+                
