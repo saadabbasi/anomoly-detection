@@ -30,22 +30,15 @@ power=1.0
 def generate_spectograms(target_dir,
                         sound_type="normal",
                         window_size = 32,
-                        ext="wav",
-                        format='4D'):
+                        ext="wav"):
 
     def crop_spectograms():
         crops_per_file = int(math.floor(spectograms.shape[1]/window_size))
         number_of_crops = len(spectograms)*crops_per_file
-        if format == '4D':
-            cropped_spectograms = np.zeros((len(files), crops_per_file, window_size, spectograms.shape[2]))
-            for n in range(len(cropped_spectograms)):
-                arr_out = view_as_windows(spectograms[n], (32,128), 32)
-                cropped_spectograms[n,:,:,:] = np.squeeze(arr_out)
-        else:
-            cropped_spectograms = np.zeros((number_of_crops, window_size, spectograms.shape[2]))
-            for n in range(len(spectograms)):
-                arr_out = view_as_windows(spectograms[n], (32,128), 32)
-                cropped_spectograms[n*crops_per_file:(n+1)*crops_per_file] = np.squeeze(arr_out)
+        cropped_spectograms = np.zeros((number_of_crops, window_size, spectograms.shape[2]))
+        for n in range(len(spectograms)):
+            arr_out = view_as_windows(spectograms[n], (32,128), 32)
+            cropped_spectograms[n*crops_per_file:(n+1)*crops_per_file] = np.squeeze(arr_out)
 
         return cropped_spectograms
 
