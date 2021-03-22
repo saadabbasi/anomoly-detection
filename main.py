@@ -58,7 +58,11 @@ spectrograms_fnames = ['0dB_fan_id_00','0dB_fan_id_02','0dB_fan_id_04','0dB_fan_
                         'min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
                         '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
 
-fbaseline = open("baseline.txt","w")
+spectrograms_fnames = ['0dB_slider_id_00','0dB_slider_id_02','0dB_slider_id_04','0dB_slider_id_06',
+                        'min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
+                        '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
+
+fbaseline = open("baseline__.txt","w")
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 for machine in spectrograms_fnames:
@@ -67,22 +71,17 @@ for machine in spectrograms_fnames:
     test_x, eval_labels = ds.test_dataset()
     raw = np.mean(test_x,axis=-1).mean(axis=-1).mean(axis=-1)
 
-    plot_distribution("hist-raw.png", eval_labels, raw)
-
-    # model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True)
-    model = tf_models.conv_baseline()
+    model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True, enlarge_by=6)
 
     preds = model.predict(test_x)
     auc_prior = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
     y_pred = compute_probs(preds, test_x)
-    plot_distribution("hist-prior.png", eval_labels, y_pred)
 
 
     history = model.fit(x=train_x,y=train_x, epochs=epochs,verbose=1)
     preds = model.predict(test_x)
     y_pred = compute_probs(preds, test_x)
     auc_after = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
-    plot_distribution(f"{machine}_hist.png", eval_labels, y_pred)
 
     sound_lvl, machine_typ, _, machine_id = machine.split('_')
     result_str = f"{sound_lvl},{machine_typ},{machine_id},{auc_after},{auc_prior}\n"
@@ -91,5 +90,3 @@ for machine in spectrograms_fnames:
     fbaseline.flush()
 
 fbaseline.close()
-# os.makedirs("saved_models", exist_ok=True) 
-# print([n.name for n in tf.get_default_graph().as_graph_def().node])
