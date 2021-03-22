@@ -276,11 +276,44 @@ def get_ds_autoencoder_model2(use_batchnorm = True, h_space_flat = True):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
+def baseline_keras_model(inputDim):
+    """
+    From: https://github.com/MIMII-hitachi/mimii_baseline/
+    define the keras model
+    the model based on the simple dense auto encoder (64*64*8*64*64)
+    """
+    inputLayer = layers.Input(shape=(inputDim,))
+    h = layers.Dense(64, activation="relu")(inputLayer)
+    h = layers.Dense(64, activation="relu")(h)
+    h = layers.Dense(8, activation="relu")(h)
+    h = layers.Dense(64, activation="relu")(h)
+    h = layers.Dense(64, activation="relu")(h)
+    h = layers.Dense(inputDim, activation=None)(h)
+
+    autoencoder = keras.Model(inputLayer, h)
+    opt = keras.optimizers.Adam(lr = 0.01)
+    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
+    return autoencoder
+
 
 if __name__ == "__main__":
-    model = get_autoencoder_model_s(depthwise_conv())
+    import tensorflow as tf
+    import tensorflow.keras.backend as K
+    # from keras.applications.mobilenet import MobileNet
+
+    run_meta = tf.RunMetadata()
+    with tf.Session(graph=tf.Graph()) as sess:
+        K.set_session(sess)
+        # net = MobileNet(alpha=.75, input_tensor=tf.placeholder('float32', shape=(1,32,32,3)))
+        # net = baseline_keras_model(64*5)
+        net = get_autoencoder_model_s(standard_conv(),use_batchnorm=True)
+
+
+
+    model = baseline_keras_model(64*5)
     model.summary()
-    keras.models.save_model(model, "tinyanomaly_dw_s.h5", save_format='h5')
+
+    keras.models.save_model(model, "tinyanomaly_baseline", save_format='tf')
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
