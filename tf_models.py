@@ -9,34 +9,33 @@ def standard_conv():
 def depthwise_conv():
     return layers.SeparableConv2D
 
-def get_autoencoder_model_s(conv, use_batchnorm = False):
+def get_autoencoder_model_s(conv, use_batchnorm = False, enlarge_by = 2):
     """
     This is smaller baseline model we designed that we use a prototype
     for GenSynth.
     """
     input_img = keras.Input(shape=(32,128,1))
-
-    x = conv(4*2, (3,3), padding = 'same')(input_img)
+    x = conv(4*enlarge_by, (3,3), padding = 'same')(input_img)
     x = layers.MaxPool2D(pool_size = (1,2))(x)
     x = layers.Activation('relu')(x)
     if use_batchnorm: x = layers.BatchNormalization()(x)
-    x = conv(8*2, (3,3), padding = 'same')(x)
+    x = conv(8*enlarge_by, (3,3), padding = 'same')(x)
     x = layers.MaxPool2D(pool_size = (1,2))(x)
     x = layers.Activation('relu')(x)
     if use_batchnorm: x = layers.BatchNormalization()(x)
-    x = conv(16*2, (3,3), padding = 'same')(x)
+    x = conv(16*enlarge_by, (3,3), padding = 'same')(x)
     encoded = layers.MaxPool2D(pool_size = (4,4))(x)
 
     x = layers.UpSampling2D(size = (4,4))(encoded)
-    x = conv(16*2, (3,3), padding = 'same')(x)
+    x = conv(16*enlarge_by, (3,3), padding = 'same')(x)
     x = layers.Activation('relu')(x)
     if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.UpSampling2D(size = (1,2))(x)
-    x = conv(8*2, (3,3), padding = 'same')(x)
+    x = conv(8*enlarge_by, (3,3), padding = 'same')(x)
     x = layers.Activation('relu')(x)
     if use_batchnorm: x = layers.BatchNormalization()(x)
     x = layers.UpSampling2D(size = (1,2))(x)
-    x = conv(4*2, (3,3), padding = 'same')(x)
+    x = conv(4*enlarge_by, (3,3), padding = 'same')(x)
     x = layers.Activation('relu')(x)
     if use_batchnorm: x = layers.BatchNormalization()(x)
     decoded = conv(1, (3,3), padding = 'same')(x)
