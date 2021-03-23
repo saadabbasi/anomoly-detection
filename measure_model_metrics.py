@@ -30,7 +30,7 @@ def benchmark_openvino_model_ns(model, shape, N = 100):
     etime = np.zeros((N,))
     if type(model) == openvino.inference_engine.ie_api.ExecutableNetwork:
         x = np.random.randn(shape[0],shape[1],shape[2],shape[3])
-        for i in range(100):
+        for i in range(N):
             start_t = perf_counter_ns()
             model.infer({'input_1':x})
             end_t = perf_counter_ns()
@@ -128,9 +128,10 @@ if __name__ == "__main__":
 
     models = [os.path.join(model_dir,name) for name in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir,name))]
     with open("results.txt","w") as f:
+        f.write("Trial ID, openvino latency (us), tensorflow latency (us)\n")
         for dir in models:
             print(f"Measuring model in {dir}")
-            latency = measure_latency_ns(dir)
+            latency = measure_latency_ns(dir,n_iterations = 100)
             gensynth_trial_id = decode_model_path(dir)
             f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
                 
