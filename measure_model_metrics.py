@@ -52,7 +52,9 @@ def load_frozen_graph(frozen_graph_filename):
         graph_def.ParseFromString(f.read())
     with tf.Graph().as_default() as graph:
         tf.import_graph_def(graph_def, name="prefix")
-    return graph
+        sess_config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
+        sess = tf.Session(config=sess_config)
+    return graph, sess
 
 def load_graph(meta_graph_file):
     graph = tf.Graph()
@@ -121,18 +123,40 @@ def measure_latency_ns(model_dir, n_iterations = 10):
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     parser = argparse.ArgumentParser()
-    parser.add_argument('model_dir')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--mdir', action='store', dest="model_dir")
+    group.add_argument('--mpath', action='store', dest="model_path")
     args = parser.parse_args()
-    
-    model_dir = args.model_dir
 
-    models = [os.path.join(model_dir,name) for name in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir,name))]
-    with open("results.txt","w") as f:
-        f.write("Trial ID, openvino latency (us), tensorflow latency (us)\n")
-        for dir in models:
-            print(f"Measuring model in {dir}")
-            latency = measure_latency_ns(dir,n_iterations = 100)
-            gensynth_trial_id = decode_model_path(dir)
-            f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
-                
-                
+    if args.model_dir:
+        print(f"Loading all models from {args.model_dir}")
+        models = [os.path.join(model_dir,name) for name in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir,name))]
+        with open("results.txt","w") as f:
+            f.write("Trial ID, openvino latency (us), tensorflow latency (us)\n")
+            for dir in models:
+                print(f"Measuring model in {dir}")
+                latency = measure_latency_ns(dir,n_iterations = 100)
+                gensynth_trial_id = decode_model_path(dir)
+                f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
+    else:
+        IMAGE_INPUT_TENSOR = "prefix/input_1:0"
+        OUTPUT_TENSOR = "prefix/conv2d_transpose_4/BiasAdd:0"
+        print(f"Loading model {args.model_path}")
+        output_name = "optimized_model"
+        xml_path = os.path.join(os.path.split(args.model_path)[0], f"{output_name}.xml")
+        convert_model_to_IR(args.model_path, output_name)
+        model = load_openvino_model(xml_path)
+        openvino_t = benchmark_openvino_model_ns(model,(1,1,32,128))
+
+        feed_dict = {IMAGE_INPUT_TENSOR: np.random.rand(1,32,128,1)}
+        graph, sess = load_frozen_graph(args.model_path)
+
+        # print([n.name for n in graph.as_graph_def().node])
+
+        tf_t = benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict)
+
+        print("========RESULTS=========")
+        print(f"Openvino: {openvino_t/1e6} µs")
+        print(f"Tensorflow: {tf_t/1e6} µs")
+        print("========================")
+        
