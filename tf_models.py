@@ -46,6 +46,58 @@ def get_autoencoder_model_s(conv, use_batchnorm = False, enlarge_by = 2):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
+def get_autoencoder_m(latentDim=40):
+    input_img = keras.Input(shape=(32,128,1))
+    x = layers.Conv2D(4, (3,3), padding = 'same', strides=(1,2))(input_img)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.Conv2D(8, (3,3), padding = 'same', strides=(1,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.Conv2D(16, (3,3), padding = 'same', strides=(2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.Conv2D(32, (3,3), padding = 'same', strides=(2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.Conv2D(64, (3,3), padding = 'same', strides=(2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    volumeSize = keras.backend.int_shape(x)
+    x = layers.Conv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
+    encoded = layers.Flatten()(x)
+
+    x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
+    x = layers.Reshape((volumeSize[1], volumeSize[2], 64))(x)             
+
+    x = layers.Conv2DTranspose(32, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.Conv2DTranspose(16, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.Conv2DTranspose(8, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.Conv2DTranspose(4, (3, 3),strides=(1,2), padding='same')(x)  #8x8
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    decoded = layers.Conv2DTranspose(1, (3, 3),strides=(1,2), padding='same')(x) 
+
+    autoencoder = keras.Model(inputs=input_img, outputs=decoded)
+    opt = keras.optimizers.Adam(lr = 0.01)
+    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
+    return autoencoder
+
 def conv_baseline(inputDim=(32,128), latentDim=40):
     """
     This is the convolutional autoencoder as described in https://arxiv.org/abs/2006.10417
@@ -290,23 +342,11 @@ def baseline_keras_model(inputDim):
 
 
 if __name__ == "__main__":
-    import tensorflow as tf
-    import tensorflow.keras.backend as K
-    # from keras.applications.mobilenet import MobileNet
 
-    run_meta = tf.RunMetadata()
-    with tf.Session(graph=tf.Graph()) as sess:
-        K.set_session(sess)
-        # net = MobileNet(alpha=.75, input_tensor=tf.placeholder('float32', shape=(1,32,32,3)))
-        # net = baseline_keras_model(64*5)
-        net = get_autoencoder_model_s(standard_conv(),use_batchnorm=True)
-
-
-
-    model = baseline_keras_model(64*5)
+    model = get_autoencoder_m()
     model.summary()
 
-    keras.models.save_model(model, "tinyanomaly_baseline", save_format='tf')
+    # keras.models.save_model(model, "tinyanomaly_baseline", save_format='tf')
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
