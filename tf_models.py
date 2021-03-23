@@ -1,7 +1,9 @@
+from os import makedirs
 import tensorflow as tf
 import tensorflow.keras.layers as layers
 import tensorflow.keras as keras
 import numpy as np
+import os
 
 def standard_conv():
     return layers.Conv2D
@@ -340,10 +342,18 @@ def baseline_keras_model(inputDim):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
+def save_model_as_metagraph(model):
+    sess = keras.backend.get_session()
+    saver = tf.train.Saver()
+    sess.run(tf.global_variables_initializer())
+    saver.save(sess, 'tiny_anomoly_sc_m/model')
 
 if __name__ == "__main__":
-
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    # model = conv_baseline()
     model = get_autoencoder_m()
     model.summary()
 
-    # keras.models.save_model(model, "tinyanomaly_baseline", save_format='tf')
+    save_model_as_metagraph(model)
+
+    # keras.models.save_model(model, 'tiny_anomoly_sc_m.h5', save_format='h5')
