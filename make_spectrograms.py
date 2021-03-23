@@ -66,7 +66,7 @@ def generate_spectograms(target_dir,
         sound_lvl = fpath[-3]
         machine_typ = fpath[-2]
         machine_id = fpath[-1]
-        npy_path = os.path.join("spectograms", f"{sound_type}", f"{sound_type}_{sound_lvl}_{machine_typ}_{machine_id}_4D.npy")
+        npy_path = os.path.join("spectograms", f"{sound_type}", f"{sound_type}_{sound_lvl}_{machine_typ}_{machine_id}.npy")
         np.save(npy_path, cropped_spectograms)
 
 
