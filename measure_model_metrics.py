@@ -78,20 +78,21 @@ def decode_model_path(model_dir):
     gensynth_trial_id = os.path.split(model_dir)[1].split("-")[0]
     return gensynth_trial_id
 
-def measure_latency_ns(model_dir):
+def measure_latency_ns(model_dir, n_iterations = 10):
     gensynth_trial_id = decode_model_path(model_dir)
     macro_arch = gensynth_trial_id.split("_")[1]
 
+    IMAGE_INPUT_TENSOR = "input_1:0"
+    LOSS_TENSOR = "loss/mul:0"
     if macro_arch == 'SC':
-        IMAGE_INPUT_TENSOR = "input_1:0"
         TARGET_INPUT_TENSOR = "conv2d_6_target:0"
         OUTPUT_TENSOR = "conv2d_6/BiasAdd:0"
-        LOSS_TENSOR = "loss/mul:0"
+    elif macro_arch == 'B':
+        TARGET_INPUT_TENSOR = "conv2d_transpose_4_target:0"
+        OUTPUT_TENSOR = "conv2d_transpose_4/BiasAdd:0"
     elif macro_arch == 'DW':
-        IMAGE_INPUT_TENSOR = "input_1:0"
         TARGET_INPUT_TENSOR = "separable_conv2d_6_target:0"
         OUTPUT_TENSOR = "separable_conv2d_6/BiasAdd:0"
-        LOSS_TENSOR = "loss/mul:0"
     else:
         raise ValueError(f"{macro_arch} not recognized. Is your directory structure and name OK?")
 
@@ -104,16 +105,15 @@ def measure_latency_ns(model_dir):
 
     convert_model_to_IR(frozen_path,openvino_output_name)
     model = load_openvino_model(openvino_path)
-    openvino_min = benchmark_openvino_model_ns(model, (1,1,32,128))
+    openvino_min = benchmark_openvino_model_ns(model, (1,1,32,128), N = n_iterations)
 
     feed_dict = {IMAGE_INPUT_TENSOR: np.random.rand(1,32,128,1)}
-    N = 100
     run_meta = tf.RunMetadata()
     graph,sess,saver = load_graph(meta_path)
 
     with sess.as_default():
         load_ckpt(sess, saver, ckpt_path)
-        tf_min = benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = 10)
+        tf_min = benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = n_iterations)
 
     return {'openvino':openvino_min, 'tensorflow':tf_min}
 
@@ -129,6 +129,7 @@ if __name__ == "__main__":
     models = [os.path.join(model_dir,name) for name in os.listdir(model_dir) if os.path.isdir(os.path.join(model_dir,name))]
     with open("results.txt","w") as f:
         for dir in models:
+            print(f"Measuring model in {dir}")
             latency = measure_latency_ns(dir)
             gensynth_trial_id = decode_model_path(dir)
             f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
