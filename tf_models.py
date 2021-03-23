@@ -227,5 +227,3 @@ if __name__ == "__main__":
 
     # save_model_as_metagraph(model)
     freeze_session(keras.backend.get_session(), output_names=[out.op.name for out in model.outputs])
-
-    # keras.models.save_model(model, 'tiny_anomoly_sc_m.h5', save_format='h5')
