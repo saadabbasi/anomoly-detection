@@ -38,6 +38,9 @@ def compute_AUC(output_imgs, target_imgs, y_true, plot_hist=False):
     return auc
 
 if __name__ == "__main__":
+    np.random.seed(42)
+    tf.random.set_random_seed(42)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', type = str, action = 'store', dest = 'output_name')
     parser.add_argument('-m', type = int, action = 'store', dest = 'enlarge_by')
@@ -54,7 +57,7 @@ if __name__ == "__main__":
     n_fft=1024
     hop_length=512
     power=1.0
-    batch_size = 16
+    batch_size = 32
     step = 3
     scaling = False
 
@@ -65,26 +68,27 @@ if __name__ == "__main__":
                             'min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
                             '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
 
-    spectrograms_fnames = ['0dB_slider_id_00','0dB_slider_id_02','0dB_slider_id_04','0dB_slider_id_06',
-                            'min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
+    spectrograms_fnames = ['min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
+                            '0dB_slider_id_00','0dB_slider_id_02','0dB_slider_id_04','0dB_slider_id_06',
                             '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
 
     fbaseline = open(f"{args.output_name}","w")
 
     for machine in spectrograms_fnames:
-        ds = mimii_dataset.MIMIIDataset(machine_type_id = machine)
+        ds = mimii_dataset.MIMIIDataset(machine_type_id = machine, train_batch_size = batch_size)
         train_x, _ = ds.train_dataset()
         test_x, eval_labels = ds.test_dataset()
         raw = np.mean(test_x,axis=-1).mean(axis=-1).mean(axis=-1)
 
-        model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True, enlarge_by=args.enlarge_by)
+        # model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True, enlarge_by=args.enlarge_by)
+        model = tf_models.get_autoencoder_m()
 
         preds = model.predict(test_x)
         auc_prior = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
         y_pred = compute_probs(preds, test_x)
 
 
-        history = model.fit(x=train_x,y=train_x, epochs=epochs,verbose=1)
+        history = model.fit(x=train_x,y=train_x, epochs=epochs,verbose=1,batch_size=batch_size)
         preds = model.predict(test_x)
         y_pred = compute_probs(preds, test_x)
         auc_after = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
