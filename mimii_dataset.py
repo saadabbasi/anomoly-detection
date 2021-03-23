@@ -63,7 +63,7 @@ class MIMIIDataset():
 
 class MIMIIDatasetInterface():
     def __init__(self):
-        self.ds = MIMIIDataset(spectogram_dir=_SPECTOGRAM_DATA_DIR)
+        self.ds = MIMIIDataset(spectogram_dir=_SPECTOGRAM_DATA_DIR, train_batch_size = 32, test_batch_size = 32)
         self.train_x, self.train_y = self.ds.train_dataset()
         self.test_x, self.test_y = self.ds.test_dataset()
         self.val_x, self.val_y = self.ds.val_dataset()
