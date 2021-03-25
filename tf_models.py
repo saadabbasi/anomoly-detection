@@ -57,23 +57,23 @@ def get_autoencoder_m(latentDim=40):
     input_img = keras.Input(shape=(32,128,1))
     x = layers.Conv2D(4, (3,3), padding = 'same', strides=(1,2))(input_img)
     x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
+    x = layers.Activation('relu')(x) # 32 x 64
 
     x = layers.Conv2D(8, (3,3), padding = 'same', strides=(1,2))(x)
     x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
+    x = layers.Activation('relu')(x) # 32 x 32
 
     x = layers.Conv2D(16, (3,3), padding = 'same', strides=(2,2))(x)
     x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
+    x = layers.Activation('relu')(x) # 16 x 16
 
     x = layers.Conv2D(32, (3,3), padding = 'same', strides=(2,2))(x)
     x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
+    x = layers.Activation('relu')(x) # 8 x 8 
 
     x = layers.Conv2D(64, (3,3), padding = 'same', strides=(2,2))(x)
     x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
+    x = layers.Activation('relu')(x) # 4 x 4
 
     volumeSize = keras.backend.int_shape(x)
     x = layers.Conv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
@@ -82,23 +82,33 @@ def get_autoencoder_m(latentDim=40):
     x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
     x = layers.Reshape((volumeSize[1], volumeSize[2], 64))(x)             
 
-    x = layers.Conv2DTranspose(32, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    # x = layers.Conv2DTranspose(32, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.UpSampling2D(size = (2,2))(x)
+    x = layers.Conv2D(32, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    x = layers.Conv2DTranspose(16, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    # x = layers.Conv2DTranspose(16, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.UpSampling2D(size = (2,2))(x)
+    x = layers.Conv2D(16, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    x = layers.Conv2DTranspose(8, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    # x = layers.Conv2DTranspose(8, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.UpSampling2D(size = (2,2))(x)
+    x = layers.Conv2D(8, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    x = layers.Conv2DTranspose(4, (3, 3),strides=(1,2), padding='same')(x)  #8x8
+    # x = layers.Conv2DTranspose(4, (3, 3),strides=(1,2), padding='same')(x)  #8x8
+    x = layers.UpSampling2D(size = (1,2))(x)
+    x = layers.Conv2D(4, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    decoded = layers.Conv2DTranspose(1, (3, 3),strides=(1,2), padding='same')(x) 
+    # decoded = layers.Conv2DTranspose(1, (3, 3),strides=(1,2), padding='same')(x) 
+    x = layers.UpSampling2D(size = (1,2))(x)
+    decoded = layers.Conv2D(1, (3,3), strides=(1,1), padding = 'same')(x)
 
     autoencoder = keras.Model(inputs=input_img, outputs=decoded)
     opt = keras.optimizers.Adam(lr = 0.01)
@@ -195,6 +205,6 @@ if __name__ == "__main__":
     model = get_autoencoder_m()
     model.summary()
 
-    save_model_as_metagraph(model)
+    # save_model_as_metagraph(model)
 
     # keras.models.save_model(model, 'tiny_anomoly_sc_m.h5', save_format='h5')
