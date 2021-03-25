@@ -82,31 +82,26 @@ def get_autoencoder_m(latentDim=40):
     x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
     x = layers.Reshape((volumeSize[1], volumeSize[2], 64))(x)             
 
-    # x = layers.Conv2DTranspose(32, (3, 3),strides=(2,2), padding='same')(x)  #8x8
     x = layers.UpSampling2D(size = (2,2))(x)
     x = layers.Conv2D(32, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    # x = layers.Conv2DTranspose(16, (3, 3),strides=(2,2), padding='same')(x)  #8x8
     x = layers.UpSampling2D(size = (2,2))(x)
     x = layers.Conv2D(16, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    # x = layers.Conv2DTranspose(8, (3, 3),strides=(2,2), padding='same')(x)  #8x8
     x = layers.UpSampling2D(size = (2,2))(x)
     x = layers.Conv2D(8, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    # x = layers.Conv2DTranspose(4, (3, 3),strides=(1,2), padding='same')(x)  #8x8
     x = layers.UpSampling2D(size = (1,2))(x)
     x = layers.Conv2D(4, (3,3), strides = (1,1), padding = 'same')(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    # decoded = layers.Conv2DTranspose(1, (3, 3),strides=(1,2), padding='same')(x) 
     x = layers.UpSampling2D(size = (1,2))(x)
     decoded = layers.Conv2D(1, (3,3), strides=(1,1), padding = 'same')(x)
 
