@@ -94,10 +94,9 @@ if __name__ == "__main__":
             print(f"Measuring model in {dir}")
             latency = measure_latency_ns(dir,n_iterations = 100)
             gensynth_trial_id = decode_model_path(dir)
-            f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
+            f.write(f"{gensynth_trial_id},{latency['tensorflow']/1e6}\n")
 
     print("========RESULTS=========")
-    print(f"Openvino: {openvino_t/1e6} µs")
-    print(f"Tensorflow: {tf_t/1e6} µs")
+    print(f"Tensorflow RPI: {tf_t/1e6} µs")
     print("========================")
     
