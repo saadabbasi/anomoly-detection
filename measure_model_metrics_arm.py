@@ -52,6 +52,9 @@ def measure_latency_ns(model_dir, n_iterations = 10):
     elif macro_arch == 'B':
         TARGET_INPUT_TENSOR = "conv2d_transpose_4_target:0"
         OUTPUT_TENSOR = "conv2d_transpose_4/BiasAdd:0"
+    elif macro_arch == 'D':
+        TARGET_INPUT_TENSOR = "conv2d_10_target:0"
+        OUTPUT_TENSOR = "conv2d_10/BiasAdd:0"
     elif macro_arch == 'DW':
         TARGET_INPUT_TENSOR = "separable_conv2d_6_target:0"
         OUTPUT_TENSOR = "separable_conv2d_6/BiasAdd:0"
