@@ -1,20 +1,9 @@
 import os
-os.system("source /opt/intel/openvino_2021/bin/setupvars.sh")
 import tensorflow as tf
 import numpy as np
 import os
-import mimii_dataset
 from time import perf_counter_ns
-import openvino
-from openvino.inference_engine import IENetwork, IECore
 import argparse
-
-def convert_model_to_IR(frozen_model_path, output_name):
-    frozen_model_path = frozen_model_path.replace(" ","\ ")
-    output_dir = os.path.dirname(frozen_model_path)
-    cmd_string = f"python /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo_tf.py --input_model {frozen_model_path} --input \"input_1[1 32 128 1]\" -n {output_name} -o {output_dir}"
-    os.system(cmd_string)
-    # python /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo_tf.py --input_model frozen.pb --input "input_1[1 32 128 1]"
 
 def benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = 100):
     time_t = np.zeros((N,))
@@ -26,24 +15,6 @@ def benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = 100):
 
     return time_t.min()
 
-def benchmark_openvino_model_ns(model, shape, N = 100):
-    etime = np.zeros((N,))
-    if type(model) == openvino.inference_engine.ie_api.ExecutableNetwork:
-        x = np.random.randn(shape[0],shape[1],shape[2],shape[3])
-        for i in range(N):
-            start_t = perf_counter_ns()
-            model.infer({'input_1':x})
-            end_t = perf_counter_ns()
-            etime[i] = end_t - start_t
-    
-    return etime.min()
-
-def load_openvino_model(xml_path):
-    bin_path = os.path.splitext(xml_path)[0] + ".bin"
-    ie = IECore()
-    net = ie.read_network(model=xml_path, weights = bin_path)
-    exec_net = ie.load_network(network = net, device_name='CPU', num_requests=0)
-    return exec_net
 
 def load_frozen_graph(frozen_graph_filename):
     import tensorflow as tf
@@ -83,6 +54,7 @@ def decode_model_path(model_dir):
 def measure_latency_ns(model_dir, n_iterations = 10):
     gensynth_trial_id = decode_model_path(model_dir)
     macro_arch = gensynth_trial_id.split("_")[1]
+    print(gensynth_trial_id,macro_arch)
 
     IMAGE_INPUT_TENSOR = "input_1:0"
     LOSS_TENSOR = "loss/mul:0"
@@ -105,12 +77,6 @@ def measure_latency_ns(model_dir, n_iterations = 10):
     meta_path = os.path.join(model_dir, "model.meta")
     ckpt_path = model_dir
     frozen_path = os.path.join(model_dir, "frozen.pb")
-    openvino_output_name = "vino"
-    openvino_path = os.path.join(model_dir, f"{openvino_output_name}.xml")
-
-    convert_model_to_IR(frozen_path,openvino_output_name)
-    model = load_openvino_model(openvino_path)
-    openvino_min = benchmark_openvino_model_ns(model, (1,1,32,128), N = n_iterations)
 
     feed_dict = {IMAGE_INPUT_TENSOR: np.random.rand(1,32,128,1)}
     run_meta = tf.RunMetadata()
@@ -120,7 +86,7 @@ def measure_latency_ns(model_dir, n_iterations = 10):
         load_ckpt(sess, saver, ckpt_path)
         tf_min = benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict, N = n_iterations)
 
-    return {'openvino':openvino_min, 'tensorflow':tf_min}
+    return {'tensorflow':tf_min}
 
 
 if __name__ == "__main__":
@@ -128,28 +94,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--mdir', action='store', dest="model_dir")
-    group.add_argument('--mpath', action='store', dest="model_path")
+    group.add_argument('--baseline', action='store', dest="model_path")
     args = parser.parse_args()
 
     if args.model_dir:
         print(f"Loading all models from {args.model_dir}")
         models = [os.path.join(args.model_dir,name) for name in os.listdir(args.model_dir) if os.path.isdir(os.path.join(args.model_dir,name))]
+        print(models)
         with open("results.txt","w") as f:
             f.write("Trial ID, openvino latency (us), tensorflow latency (us)\n")
             for dir in models:
                 print(f"Measuring model in {dir}")
                 latency = measure_latency_ns(dir,n_iterations = 100)
                 gensynth_trial_id = decode_model_path(dir)
-                f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
+                f.write(f"{gensynth_trial_id},{latency['tensorflow']/1e6}\n")
     else:
+        print(f"Loading baseline model from: {args.model_path}")
         IMAGE_INPUT_TENSOR = "prefix/input_1:0"
         OUTPUT_TENSOR = "prefix/conv2d_transpose_4/BiasAdd:0"
-        print(f"Loading model {args.model_path}")
-        output_name = "optimized_model"
-        xml_path = os.path.join(os.path.split(args.model_path)[0], f"{output_name}.xml")
-        convert_model_to_IR(args.model_path, output_name)
-        model = load_openvino_model(xml_path)
-        openvino_t = benchmark_openvino_model_ns(model,(1,1,32,128))
 
         feed_dict = {IMAGE_INPUT_TENSOR: np.random.rand(1,32,128,1)}
         graph, sess = load_frozen_graph(args.model_path)
@@ -159,7 +121,6 @@ if __name__ == "__main__":
         tf_t = benchmark_tf_model_ns(sess, OUTPUT_TENSOR, feed_dict)
 
         print("========RESULTS=========")
-        print(f"Openvino: {openvino_t/1e6} µs")
-        print(f"Tensorflow: {tf_t/1e6} µs")
+        print(f"Tensorflow RPI: {tf_t/1e6} µs")
         print("========================")
-        
+    
