@@ -9,3 +9,11 @@ saved_models
 model_archives
 gs_models
 graph.pb
+*.txt
+*.index
+*.meta
+variables
+*.pb
+*.h5
+checkpoint
+my-model
