@@ -50,7 +50,7 @@ def get_autoencoder_model_s(conv, use_batchnorm = False, enlarge_by = 2):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
-def get_autoencoder_m(latentDim=40):
+def get_autoencoder_m(latentDim=60):
     """
     This is the medium sized autoencoder we built. Used for slider machine type.
     """
@@ -202,4 +202,4 @@ if __name__ == "__main__":
 
     # save_model_as_metagraph(model)
 
-    # keras.models.save_model(model, 'tiny_anomoly_sc_m.h5', save_format='h5')
+    keras.models.save_model(model, 'tiny_anomoly_sc_m.h5', save_format='h5')

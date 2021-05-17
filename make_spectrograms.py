@@ -58,7 +58,27 @@ def generate_spectograms(target_dir,
                                                     n_fft=n_fft,
                                                     hop_length=hop_length,
                                                     power=power)
-
+        import matplotlib.pyplot as plt
+        import librosa
+        import librosa.display
+        fig, ax = plt.subplots()
+        # s_db = librosa.power_to_db(spectograms[0].T, ref = np.max)
+        img = librosa.display.specshow(spectograms[0].T, x_axis = 'time', y_axis = 'mel', sr = 16000, fmax=8000, ax=ax)
+        fig.colorbar(img, ax=ax, format='%2.0f dB')
+        
+        # from mpl_toolkits.axes_grid1 import make_axes_locatable
+        # plt.figure()
+        # ax = plt.gca()
+        # im = ax.imshow(spectograms[0].T)
+        # plt.xlabel("Time (s)")
+        # plt.ylabel("Frequency (Hz)")
+        # divider = make_axes_locatable(ax)
+        # cax = divider.append_axes("right", size="5%", pad=0.05)
+        # cbar = plt.colorbar(im, cax=cax)
+        # cbar.ax.set_ylabel('dB', rotation=270, labelpad = 9)
+        
+        # plt.axis('off')
+        plt.savefig("spectrogram.png")
         cropped_spectograms = crop_spectograms()
 
         fpath = Path(fpath)
@@ -67,7 +87,7 @@ def generate_spectograms(target_dir,
         machine_typ = fpath[-2]
         machine_id = fpath[-1]
         npy_path = os.path.join("spectograms", f"{sound_type}", f"{sound_type}_{sound_lvl}_{machine_typ}_{machine_id}.npy")
-        np.save(npy_path, cropped_spectograms)
+        # np.save(npy_path, cropped_spectograms)
 
 
 if __name__ == "__main__":
@@ -75,5 +95,5 @@ if __name__ == "__main__":
     # parser.add_argument("dataset_dir")
     # args = parser.parse_args()
     dataset_dir = "/home/saad.abbasi/datasets/mimii/"
-    generate_spectograms(dataset_dir,sound_type="normal")
+    # generate_spectograms(dataset_dir,sound_type="normal")
     generate_spectograms(dataset_dir,sound_type="abnormal")
