@@ -68,9 +68,13 @@ if __name__ == "__main__":
                             'min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
                             '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
 
-    spectrograms_fnames = ['min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
-                            '0dB_slider_id_00','0dB_slider_id_02','0dB_slider_id_04','0dB_slider_id_06',
-                            '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
+    spectrograms_fnames = ['0dB_fan_id_00','0dB_fan_id_02','0dB_fan_id_04','0dB_fan_id_06',
+                            'min6dB_fan_id_00', 'min6dB_fan_id_02', 'min6dB_fan_id_04', 'min6dB_fan_id_06',
+                            '6dB_fan_id_00', '6dB_fan_id_02', '6dB_fan_id_04','6dB_fan_id_06']
+
+    # spectrograms_fnames = ['min6dB_slider_id_00','min6dB_slider_id_02','min6dB_slider_id_04','min6dB_slider_id_06',
+    #                     '0dB_slider_id_00','0dB_slider_id_02','0dB_slider_id_04','0dB_slider_id_06',
+    #                     '6dB_slider_id_00','6dB_slider_id_02','6dB_slider_id_04','6dB_slider_id_06']
 
     fbaseline = open(f"{args.output_name}","w")
 
@@ -81,7 +85,10 @@ if __name__ == "__main__":
         raw = np.mean(test_x,axis=-1).mean(axis=-1).mean(axis=-1)
 
         # model = tf_models.get_autoencoder_model_s(tf_models.standard_conv(), use_batchnorm=True, enlarge_by=args.enlarge_by)
-        model = tf_models.get_autoencoder_m()
+        # model = tf_models.get_autoencoder_m()
+        # model = tf_models.conv_baseline()
+        # model = tf_models.conv_baseline_smaller()
+        model = tf_models.conv_baseline_80k()
 
         preds = model.predict(test_x)
         auc_prior = compute_AUC(preds, test_x, eval_labels, plot_hist=True)
