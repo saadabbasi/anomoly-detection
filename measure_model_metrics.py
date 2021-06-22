@@ -12,7 +12,7 @@ import argparse
 def convert_model_to_IR(frozen_model_path, output_name):
     frozen_model_path = frozen_model_path.replace(" ","\ ")
     output_dir = os.path.dirname(frozen_model_path)
-    cmd_string = f"python /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo_tf.py --input_model {frozen_model_path} --input \"input_1[1 32 128 1]\" -n {output_name} -o {output_dir}"
+    cmd_string = f"python /opt/intel/openvino_2021.1.110/deployment_tools/model_optimizer/mo_tf.py --input_model {frozen_model_path} --input \"input_1[1 32 128 1]\" -n {output_name} -o {output_dir}"
     os.system(cmd_string)
     # python /opt/intel/openvino_2021/deployment_tools/model_optimizer/mo_tf.py --input_model frozen.pb --input "input_1[1 32 128 1]"
 
@@ -143,10 +143,11 @@ if __name__ == "__main__":
                 f.write(f"{gensynth_trial_id},{latency['openvino']/1e6},{latency['tensorflow']/1e6}\n")
     else:
         IMAGE_INPUT_TENSOR = "prefix/input_1:0"
-        OUTPUT_TENSOR = "prefix/conv2d_transpose_4/BiasAdd:0"
+        OUTPUT_TENSOR = "prefix/conv2d_transpose_3/BiasAdd:0"
         print(f"Loading model {args.model_path}")
         output_name = "optimized_model"
         xml_path = os.path.join(os.path.split(args.model_path)[0], f"{output_name}.xml")
+        print(xml_path)
         convert_model_to_IR(args.model_path, output_name)
         model = load_openvino_model(xml_path)
         openvino_t = benchmark_openvino_model_ns(model,(1,1,32,128))
