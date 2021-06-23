@@ -4,7 +4,7 @@ import tensorflow.keras.layers as layers
 import tensorflow.keras as keras
 import numpy as np
 import os
-# from keras_flops import get_flops
+from keras_flops import get_flops
 
 def standard_conv():
     return layers.Conv2D
@@ -112,25 +112,26 @@ def get_autoencoder_m(latentDim=60):
     return autoencoder
 
 def conv_baseline_dw(inputDim=(32,128), latentDim=40):
+    N = 3
     input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
     # encoder
-    x = layers.SeparableConv2D(32, (5, 5), padding='same')(input_img)   #32x128 -> 32x64
+    x = layers.SeparableConv2D(32*N, (5, 5), padding='same')(input_img)   #32x128 -> 32x64
     x = layers.MaxPool2D((1,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.SeparableConv2D(64, (5, 5), padding='same')(x)           #32x32
+    x = layers.SeparableConv2D(64*N, (5, 5), padding='same')(x)           #32x32
     x = layers.MaxPool2D((1,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.SeparableConv2D(128, (5, 5), padding='same')(x)          #16x16
+    x = layers.SeparableConv2D(128*N, (5, 5), padding='same')(x)          #16x16
     x = layers.MaxPool2D((2,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.SeparableConv2D(256, (3, 3), padding='same')(x)          #8x8
+    x = layers.SeparableConv2D(256*2, (3, 3), padding='same')(x)          #8x8
     x = layers.MaxPool2D((2,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.SeparableConv2D(512, (3, 3), padding='same')(x)          #4x4
+    x = layers.SeparableConv2D(512*2, (3, 3), padding='same')(x)          #4x4
     x = layers.MaxPool2D((2,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
@@ -143,24 +144,24 @@ def conv_baseline_dw(inputDim=(32,128), latentDim=40):
     
     # decoder
     x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = layers.Reshape((volumeSize[1], volumeSize[2], 512))(x)                #4x4
+    x = layers.Reshape((volumeSize[1], volumeSize[2], 512*2))(x)                #4x4
 
-    x = layers.SeparableConv2D(256, (3, 3), padding='same')(x)          #4x4
+    x = layers.SeparableConv2D(256*2, (3, 3), padding='same')(x)          #4x4
     x = layers.UpSampling2D((2,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    x = layers.SeparableConv2D(128, (3, 3), padding='same')(x)  
+    x = layers.SeparableConv2D(128*N, (3, 3), padding='same')(x)  
     x = layers.UpSampling2D((2,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    x = layers.SeparableConv2D(64, (5, 5), padding='same')(x)  
+    x = layers.SeparableConv2D(64*N, (5, 5), padding='same')(x)  
     x = layers.UpSampling2D((2,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
-    x = layers.SeparableConv2D(32, (5, 5), padding='same')(x)  
+    x = layers.SeparableConv2D(32*N, (5, 5), padding='same')(x)  
     x = layers.UpSampling2D((1,2))(x)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
@@ -345,15 +346,16 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     # model = get_autoencoder_model_s()
     model = conv_baseline_dw()
+    # model = conv_baseline()
     # model = conv_baseline_90k()
     model.summary()
 
-    # flops = get_flops(model, batch_size=1)
-    # print(flops/1e6)
+    flops = get_flops(model, batch_size=1)
+    print(flops/1e6)
 
     # # save_model_as_metagraph(model)
 
     # keras.models.save_model(model, 'tiny_anomoly_sc_m.h5', save_format='h5')
-    freeze_session(keras.backend.get_session(), output_names=[out.op.name for out in model.outputs])
+    # freeze_session(keras.backend.get_session(), output_names=[out.op.name for out in model.outputs])
 
-    print([n.name for n in tf.get_default_graph().as_graph_def().node])
+    # print([n.name for n in tf.get_default_graph().as_graph_def().node])
