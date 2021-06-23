@@ -111,58 +111,6 @@ def get_autoencoder_m(latentDim=60):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
-# def conv_baseline_halfsize(inputDim=(32,128), latentDim=40):
-
-def conv_baseline_69k(inputDim=(32,128), latentDim=40):
-    input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
-
-    # encoder
-    x = layers.Conv2D(4, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(8, (5, 5),strides=(1,2), padding='same')(x)           #32x32
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(12, (5, 5),strides=(2,2), padding='same')(x)          #16x16
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(21, (3, 3),strides=(2,2), padding='same')(x)          #8x8
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(33, (3, 3),strides=(2,2), padding='same')(x)          #4x4
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-
-    volumeSize = keras.backend.int_shape(x)
-    # at this point the representation size is latentDim i.e. latentDim-dimensional
-    x = layers.Conv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
-    encoded = layers.Flatten()(x)
-    
-    
-    # decoder
-    x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = layers.Reshape((volumeSize[1], volumeSize[2], 33))(x)                #4x4
-
-    x = layers.Conv2DTranspose(21, (3, 3),strides=(2,2), padding='same')(x)  #8x8
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(12, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(8, (5, 5),strides=(2,2), padding='same')(x)   #32x32
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(4, (5, 5),strides=(1,2), padding='same')(x)   #32x64
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    
-    decoded = layers.Conv2DTranspose(1, (5, 5),strides=(1,2), padding='same')(x) 
-
-    autoencoder = keras.Model(inputs=input_img, outputs=decoded)
-    opt = keras.optimizers.Adam(lr = 0.001)
-    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
-    return autoencoder
-
 def conv_baseline(inputDim=(32,128), latentDim=40):
     """
     This is the convolutional autoencoder as described in https://arxiv.org/abs/2006.10417
@@ -222,73 +170,26 @@ def conv_baseline(inputDim=(32,128), latentDim=40):
     return autoencoder
 #########################################################################
 
-def conv_breakingpoint(inputDim=(32,128), latentDim=40):
-    input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
-    N = 3
-    # encoder
-    x = layers.Conv2D(32//N, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(64//N, (5, 5),strides=(1,2), padding='same')(x)           #32x32
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(128//N, (5, 5),strides=(2,2), padding='same')(x)          #16x16
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(256//N, (3, 3),strides=(2,2), padding='same')(x)          #8x8
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(512//N, (3, 3),strides=(2,2), padding='same')(x)          #4x4
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-
-    volumeSize = keras.backend.int_shape(x)
-    # at this point the representation size is latentDim i.e. latentDim-dimensional
-    x = layers.Conv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
-    encoded = layers.Flatten()(x)
-    
-    
-    # decoder
-    x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = layers.Reshape((volumeSize[1], volumeSize[2], 512//N))(x)                #4x4
-
-    x = layers.Conv2DTranspose(256//N, (3, 3),strides=(2,2), padding='same')(x)  #8x8
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(128//N, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(64//N, (5, 5),strides=(2,2), padding='same')(x)   #32x32
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(32//N, (5, 5),strides=(1,2), padding='same')(x)   #32x64
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    
-    decoded = layers.Conv2DTranspose(1, (5, 5),strides=(1,2), padding='same')(x) 
-
-    autoencoder = keras.Model(inputs=input_img, outputs=decoded)
-    opt = keras.optimizers.Adam(lr = 0.001)
-    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
-    return autoencoder
-
-def conv_baseline_90k(inputDim=(32,128), latentDim=40):
+def conv_baseline_90k(inputDim=(32,128), latentDim=60):
+    """
+    This model serves as a smaller baseline
+    """
     input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
 
     # encoder
-    x = layers.Conv2D(2, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
+    x = layers.Conv2D(1, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2D(4, (5, 5),strides=(1,2), padding='same')(x)           #32x32
+    x = layers.Conv2D(2, (5, 5),strides=(1,2), padding='same')(x)           #32x32
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2D(8, (5, 5),strides=(2,2), padding='same')(x)          #16x16
+    x = layers.Conv2D(4, (5, 5),strides=(2,2), padding='same')(x)          #16x16
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2D(16, (3, 3),strides=(2,2), padding='same')(x)          #8x8
+    x = layers.Conv2D(24, (3, 3),strides=(2,2), padding='same')(x)          #8x8
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2D(24, (3, 3),strides=(2,2), padding='same')(x)          #4x4
+    x = layers.Conv2D(28, (3, 3),strides=(2,2), padding='same')(x)          #4x4
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
@@ -300,18 +201,18 @@ def conv_baseline_90k(inputDim=(32,128), latentDim=40):
     
     # decoder
     x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = layers.Reshape((volumeSize[1], volumeSize[2], 24))(x)                #4x4
+    x = layers.Reshape((volumeSize[1], volumeSize[2], 28))(x)                #4x4
 
-    x = layers.Conv2DTranspose(16, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.Conv2DTranspose(24, (3, 3),strides=(2,2), padding='same')(x)  #8x8
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(8, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
+    x = layers.Conv2DTranspose(4, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(4, (5, 5),strides=(2,2), padding='same')(x)   #32x32
+    x = layers.Conv2DTranspose(2, (5, 5),strides=(2,2), padding='same')(x)   #32x32
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(2, (5, 5),strides=(1,2), padding='same')(x)   #32x64
+    x = layers.Conv2DTranspose(1, (5, 5),strides=(1,2), padding='same')(x)   #32x64
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     
@@ -321,48 +222,6 @@ def conv_baseline_90k(inputDim=(32,128), latentDim=40):
     opt = keras.optimizers.Adam(lr = 0.001)
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
-
-def conv_baseline_80k(inputDim=(32,128), latentDim=60):
-    input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
-    x = layers.Conv2D(2, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(4, (5, 5),strides=(2,2), padding='same')(x)           #32x32
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2D(8, (5, 5),strides=(2,2), padding='same')(x)          #16x16
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.MaxPool2D()(x)
-
-    volumeSize = keras.backend.int_shape(x)
-    # at this point the representation size is latentDim i.e. latentDim-dimensional
-    x = layers.Conv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
-    encoded = layers.Flatten()(x)
-    
-    
-    # decoder
-    x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = layers.Reshape((volumeSize[1], volumeSize[2], 8))(x)                #4x4
-
-
-    x = layers.Conv2DTranspose(8, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(4, (5, 5),strides=(2,2), padding='same')(x)   #32x32
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(2, (5, 5),strides=(2,2), padding='same')(x)   #32x64
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
-    
-    decoded = layers.Conv2DTranspose(1, (5, 5),strides=(1,2), padding='same')(x) 
-
-    autoencoder = keras.Model(inputs=input_img, outputs=decoded)
-    opt = keras.optimizers.Adam(lr = 0.001)
-    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
-    return autoencoder
-
 
 def baseline_keras_model(inputDim):
     """
@@ -423,7 +282,7 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     # model = get_autoencoder_model_s()
     # model = conv_baseline()
-    model = conv_baseline_69k()
+    model = conv_baseline_90k()
     model.summary()
 
     # flops = get_flops(model, batch_size=1)
