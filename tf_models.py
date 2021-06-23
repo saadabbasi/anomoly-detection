@@ -117,7 +117,7 @@ def conv_baseline_69k(inputDim=(32,128), latentDim=40):
     input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
 
     # encoder
-    x = layers.Conv2D(2, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
+    x = layers.Conv2D(4, (5, 5),strides=(1,2), padding='same')(input_img)   #32x128 -> 32x64
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.Conv2D(8, (5, 5),strides=(1,2), padding='same')(x)           #32x32
@@ -126,10 +126,10 @@ def conv_baseline_69k(inputDim=(32,128), latentDim=40):
     x = layers.Conv2D(12, (5, 5),strides=(2,2), padding='same')(x)          #16x16
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2D(16, (3, 3),strides=(2,2), padding='same')(x)          #8x8
+    x = layers.Conv2D(21, (3, 3),strides=(2,2), padding='same')(x)          #8x8
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2D(38, (3, 3),strides=(2,2), padding='same')(x)          #4x4
+    x = layers.Conv2D(33, (3, 3),strides=(2,2), padding='same')(x)          #4x4
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
@@ -141,9 +141,9 @@ def conv_baseline_69k(inputDim=(32,128), latentDim=40):
     
     # decoder
     x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = layers.Reshape((volumeSize[1], volumeSize[2], 38))(x)                #4x4
+    x = layers.Reshape((volumeSize[1], volumeSize[2], 33))(x)                #4x4
 
-    x = layers.Conv2DTranspose(16, (3, 3),strides=(2,2), padding='same')(x)  #8x8
+    x = layers.Conv2DTranspose(21, (3, 3),strides=(2,2), padding='same')(x)  #8x8
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.Conv2DTranspose(12, (3, 3),strides=(2,2), padding='same')(x)  #16x16   
@@ -152,7 +152,7 @@ def conv_baseline_69k(inputDim=(32,128), latentDim=40):
     x = layers.Conv2DTranspose(8, (5, 5),strides=(2,2), padding='same')(x)   #32x32
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2DTranspose(2, (5, 5),strides=(1,2), padding='same')(x)   #32x64
+    x = layers.Conv2DTranspose(4, (5, 5),strides=(1,2), padding='same')(x)   #32x64
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     
@@ -288,7 +288,7 @@ def conv_baseline_90k(inputDim=(32,128), latentDim=40):
     x = layers.Conv2D(16, (3, 3),strides=(2,2), padding='same')(x)          #8x8
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
-    x = layers.Conv2D(32, (3, 3),strides=(2,2), padding='same')(x)          #4x4
+    x = layers.Conv2D(24, (3, 3),strides=(2,2), padding='same')(x)          #4x4
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
 
@@ -300,7 +300,7 @@ def conv_baseline_90k(inputDim=(32,128), latentDim=40):
     
     # decoder
     x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
-    x = layers.Reshape((volumeSize[1], volumeSize[2], 32))(x)                #4x4
+    x = layers.Reshape((volumeSize[1], volumeSize[2], 24))(x)                #4x4
 
     x = layers.Conv2DTranspose(16, (3, 3),strides=(2,2), padding='same')(x)  #8x8
     x = layers.BatchNormalization()(x)
