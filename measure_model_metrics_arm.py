@@ -111,7 +111,8 @@ if __name__ == "__main__":
     else:
         print(f"Loading baseline model from: {args.model_path}")
         IMAGE_INPUT_TENSOR = "prefix/input_1:0"
-        OUTPUT_TENSOR = "prefix/conv2d_transpose_4/BiasAdd:0"
+        # OUTPUT_TENSOR = "prefix/conv2d_transpose_4/BiasAdd:0"
+        OUTPUT_TENSOR = "prefix/up_sampling2d_4/resize/ResizeNearestNeighbor:0"
 
         feed_dict = {IMAGE_INPUT_TENSOR: np.random.rand(1,32,128,1)}
         graph, sess = load_frozen_graph(args.model_path)

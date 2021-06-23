@@ -111,6 +111,69 @@ def get_autoencoder_m(latentDim=60):
     autoencoder.compile(optimizer=opt, loss='mean_squared_error')
     return autoencoder
 
+def conv_baseline_dw(inputDim=(32,128), latentDim=40):
+    input_img = keras.Input(shape=(inputDim[0], inputDim[1], 1))  # adapt this if using 'channels_first' image data format
+    # encoder
+    x = layers.SeparableConv2D(32, (5, 5), padding='same')(input_img)   #32x128 -> 32x64
+    x = layers.MaxPool2D((1,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(64, (5, 5), padding='same')(x)           #32x32
+    x = layers.MaxPool2D((1,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(128, (5, 5), padding='same')(x)          #16x16
+    x = layers.MaxPool2D((2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(256, (3, 3), padding='same')(x)          #8x8
+    x = layers.MaxPool2D((2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    x = layers.SeparableConv2D(512, (3, 3), padding='same')(x)          #4x4
+    x = layers.MaxPool2D((2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    volumeSize = keras.backend.int_shape(x)
+    # at this point the representation size is latentDim i.e. latentDim-dimensional
+    x = layers.SeparableConv2D(latentDim, (4,4), strides=(1,1), padding='valid')(x)
+    encoded = layers.Flatten()(x)
+    
+    
+    # decoder
+    x = layers.Dense(volumeSize[1] * volumeSize[2] * volumeSize[3])(encoded) 
+    x = layers.Reshape((volumeSize[1], volumeSize[2], 512))(x)                #4x4
+
+    x = layers.SeparableConv2D(256, (3, 3), padding='same')(x)          #4x4
+    x = layers.UpSampling2D((2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.SeparableConv2D(128, (3, 3), padding='same')(x)  
+    x = layers.UpSampling2D((2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.SeparableConv2D(64, (5, 5), padding='same')(x)  
+    x = layers.UpSampling2D((2,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+
+    x = layers.SeparableConv2D(32, (5, 5), padding='same')(x)  
+    x = layers.UpSampling2D((1,2))(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.Activation('relu')(x)
+    
+    # decoded = layers.UpSampling2D((1,2))(x)
+    decoded = layers.SeparableConv2D(1, (5, 5), padding='same')(x)  
+    decoded = layers.UpSampling2D((1,2))(decoded)
+
+    autoencoder = keras.Model(inputs=input_img, outputs=decoded)
+    opt = keras.optimizers.Adam(lr = 0.001)
+    autoencoder.compile(optimizer=opt, loss='mean_squared_error')
+    return autoencoder
+
 def conv_baseline(inputDim=(32,128), latentDim=40):
     """
     This is the convolutional autoencoder as described in https://arxiv.org/abs/2006.10417
@@ -274,15 +337,15 @@ def freeze_session(session, keep_var_names=None, output_names=None, clear_device
                 node.device = ""
         frozen_graph = tf.graph_util.convert_variables_to_constants(
             session, input_graph_def, output_names, freeze_var_names)
-    tf.train.write_graph(frozen_graph, "baseline_84k", "baseline.pb", as_text=False)
+    tf.train.write_graph(frozen_graph, "sc_vs_dw", "baseline_dw.pb", as_text=False)
 
 
 
 if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     # model = get_autoencoder_model_s()
-    # model = conv_baseline()
-    model = conv_baseline_90k()
+    model = conv_baseline_dw()
+    # model = conv_baseline_90k()
     model.summary()
 
     # flops = get_flops(model, batch_size=1)
@@ -292,3 +355,5 @@ if __name__ == "__main__":
 
     # keras.models.save_model(model, 'tiny_anomoly_sc_m.h5', save_format='h5')
     freeze_session(keras.backend.get_session(), output_names=[out.op.name for out in model.outputs])
+
+    print([n.name for n in tf.get_default_graph().as_graph_def().node])
